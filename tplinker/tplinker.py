@@ -171,7 +171,8 @@ class HandshakingTaggingScheme(object):
                       ent_shaking_tag, 
                       head_rel_shaking_tag, 
                       tail_rel_shaking_tag, 
-                      tok2char_span):
+                      tok2char_span, 
+                      tok_offset = 0, char_offset = 0):
         '''
         ent shaking tag: (shaking_seq_len, )
         head rel and tail rel shaking_tag: size = (rel_size, shaking_seq_len, )
@@ -237,13 +238,14 @@ class HandshakingTaggingScheme(object):
                     if tail_rel_memory not in tail_rel_memory_set:
                         # no such relation 
                         continue
+                    
                     rel_list.append({
                         "subject": subj["text"],
                         "object": obj["text"],
-                        "subj_tok_span": subj["tok_span"],
-                        "obj_tok_span": obj["tok_span"],
-                        "subj_char_span": subj["char_span"],
-                        "obj_char_span": obj["char_span"],
+                        "subj_tok_span": [subj["tok_span"][0] + tok_offset, subj["tok_span"][1] + tok_offset],
+                        "obj_tok_span": [obj["tok_span"][0] + tok_offset, obj["tok_span"][1] + tok_offset],
+                        "subj_char_span": [subj["char_span"][0] + char_offset, subj["char_span"][1] + char_offset],
+                        "obj_char_span": [obj["char_span"][0] + char_offset, obj["char_span"][1] + char_offset],
                         "predicate": self.id2rel[rel_id],
                     })
         return rel_list
@@ -253,11 +255,10 @@ class DataMaker4Bert():
         self.tokenizer = tokenizer
         self.handshaking_tagger = handshaking_tagger
     
-    def get_indexed_train_valid_data(self, data, max_seq_len):
+    def get_indexed_data(self, data, max_seq_len, data_type = "train"):
         indexed_samples = []
         for ind, sample in tqdm(enumerate(data), desc = "Generate indexed train or valid data"):
             text = sample["text"]
-            text_id = sample["id"]
             # codes for bert input
             codes = self.tokenizer.encode_plus(text, 
                                     return_offsets_mapping = True, 
@@ -267,7 +268,9 @@ class DataMaker4Bert():
 
 
             # tagging
-            spots_tuple = self.handshaking_tagger.get_spots(sample)
+            spots_tuple = None
+            if data_type != "test":
+                spots_tuple = self.handshaking_tagger.get_spots(sample)
 
             # get codes
             input_ids = torch.tensor(codes["input_ids"]).long()
@@ -275,8 +278,7 @@ class DataMaker4Bert():
             token_type_ids = torch.tensor(codes["token_type_ids"]).long()
             tok2char_span = codes["offset_mapping"]
 
-            sample_tp = (text_id,
-                     text, 
+            sample_tp = (sample,
                      input_ids,
                      attention_mask,
                      token_type_ids,
@@ -285,89 +287,45 @@ class DataMaker4Bert():
                     )
             indexed_samples.append(sample_tp)       
         return indexed_samples
-    
-    def get_indexed_pred_data(self, data, max_seq_len):
-        indexed_samples = []
-        for ind, sample in tqdm(enumerate(data), desc = "Generate indexed pred data"):
-            text = sample["text"] 
-            text_id = sample["id"]
-            # @specific
-            codes = self.tokenizer.encode_plus(text, 
-                                    return_offsets_mapping = True, 
-                                    add_special_tokens = False,
-                                    max_length = max_seq_len, 
-                                    pad_to_max_length = True)
-
-            input_ids = torch.tensor(codes["input_ids"]).long()
-            attention_mask = torch.tensor(codes["attention_mask"]).long()
-            token_type_ids = torch.tensor(codes["token_type_ids"]).long()
-            tok2char_span = codes["offset_mapping"]
-
-            sample_tp = (text_id,
-                     text, 
-                     input_ids,
-                     attention_mask,
-                     token_type_ids,
-                     tok2char_span,
-                     )
-            indexed_samples.append(sample_tp)       
-        return indexed_samples
-    
-    def generate_train_dev_batch(self, batch_data):
-        text_id_list = []
-        text_list = []
+ 
+    def generate_batch(self, batch_data, data_type = "train"):
+        sample_list = []
         input_ids_list = []
         attention_mask_list = []
         token_type_ids_list = [] 
         tok2char_span_list = []
+        
         ent_spots_list = []
         head_rel_spots_list = []
         tail_rel_spots_list = []
 
-        for sample in batch_data:
-            text_id_list.append(sample[0])
-            text_list.append(sample[1])
-            input_ids_list.append(sample[2])
-            attention_mask_list.append(sample[3])        
-            token_type_ids_list.append(sample[4])        
-            tok2char_span_list.append(sample[5])
-
-            ent_matrix_spots, head_rel_matrix_spots, tail_rel_matrix_spots = sample[6]
-            ent_spots_list.append(ent_matrix_spots)
-            head_rel_spots_list.append(head_rel_matrix_spots)
-            tail_rel_spots_list.append(tail_rel_matrix_spots)
+        for tp in batch_data:
+            sample_list.append(tp[0])
+            input_ids_list.append(tp[1])
+            attention_mask_list.append(tp[2])        
+            token_type_ids_list.append(tp[3])        
+            tok2char_span_list.append(tp[4])
+            
+            if data_type != "test":
+                ent_matrix_spots, head_rel_matrix_spots, tail_rel_matrix_spots = tp[5]
+                ent_spots_list.append(ent_matrix_spots)
+                head_rel_spots_list.append(head_rel_matrix_spots)
+                tail_rel_spots_list.append(tail_rel_matrix_spots)
 
         # @specific: indexed by bert tokenizer
         batch_input_ids = torch.stack(input_ids_list, dim = 0)
         batch_attention_mask = torch.stack(attention_mask_list, dim = 0)
         batch_token_type_ids = torch.stack(token_type_ids_list, dim = 0)
+        
+        batch_ent_shaking_tag, batch_head_rel_shaking_tag, batch_tail_rel_shaking_tag = None, None, None
+        if data_type != "test":
+            batch_ent_shaking_tag = self.handshaking_tagger.sharing_spots2shaking_tag4batch(ent_spots_list)
+            batch_head_rel_shaking_tag = self.handshaking_tagger.spots2shaking_tag4batch(head_rel_spots_list)
+            batch_tail_rel_shaking_tag = self.handshaking_tagger.spots2shaking_tag4batch(tail_rel_spots_list)
 
-        batch_ent_shaking_tag = self.handshaking_tagger.sharing_spots2shaking_tag4batch(ent_spots_list)
-        batch_head_rel_shaking_tag = self.handshaking_tagger.spots2shaking_tag4batch(head_rel_spots_list)
-        batch_tail_rel_shaking_tag = self.handshaking_tagger.spots2shaking_tag4batch(tail_rel_spots_list)
-
-        return text_id_list, text_list, \
+        return sample_list, \
               batch_input_ids, batch_attention_mask, batch_token_type_ids, tok2char_span_list, \
                 batch_ent_shaking_tag, batch_head_rel_shaking_tag, batch_tail_rel_shaking_tag
-    
-    def generate_pred_batch(self, batch_data):
-        text_ids = []
-        text_list = []
-        input_ids_list = []
-        attention_mask_list = []
-        token_type_ids_list = [] 
-        tok2char_span_list = []
-        for sample in batch_data:
-            text_ids.append(sample[0])
-            text_list.append(sample[1])
-            input_ids_list.append(sample[2])
-            attention_mask_list.append(sample[3])        
-            token_type_ids_list.append(sample[4])        
-            tok2char_span_list.append(sample[5])
-        batch_input_ids = torch.stack(input_ids_list, dim = 0)
-        batch_attention_mask = torch.stack(attention_mask_list, dim = 0)
-        batch_token_type_ids = torch.stack(token_type_ids_list, dim = 0)
-        return text_ids, text_list, batch_input_ids, batch_attention_mask, batch_token_type_ids, tok2char_span_list
 
 class DataMaker4BiLSTM():
     def __init__(self, text2indices, get_tok2char_span_map, handshaking_tagger):
@@ -375,20 +333,20 @@ class DataMaker4BiLSTM():
         self.handshaking_tagger = handshaking_tagger
         self.get_tok2char_span_map = get_tok2char_span_map
         
-    def get_indexed_train_valid_data(self, data, max_seq_len):
+    def get_indexed_data(self, data, max_seq_len, data_type = "train"):
         indexed_samples = []
         for ind, sample in tqdm(enumerate(data), desc = "Generate indexed train or valid data"):
             text = sample["text"]
-            text_id = sample["id"]
 
             # tagging
-            spots_tuple = self.handshaking_tagger.get_spots(sample)
+            spots_tuple = None
+            if data_type != "test":
+                spots_tuple = self.handshaking_tagger.get_spots(sample)
             tok2char_span = self.get_tok2char_span_map(text)
             tok2char_span.extend([(-1, -1)] * (max_seq_len - len(tok2char_span)))
             input_ids = self.text2indices(text, max_seq_len)
 
-            sample_tp = (text_id,
-                     text, 
+            sample_tp = (sample,
                      input_ids,
                      tok2char_span,
                      spots_tuple,
@@ -396,66 +354,37 @@ class DataMaker4BiLSTM():
             indexed_samples.append(sample_tp)       
         return indexed_samples
     
-    def get_indexed_pred_data(self, data, max_seq_len):
-        indexed_samples = []
-        for ind, sample in tqdm(enumerate(data), desc = "Generate indexed pred data"):
-            text = sample["text"]
-            text_id = sample["id"]
-
-            tok2char_span = self.get_tok2char_span_map(text)
-            tok2char_span.extend([(-1, -1)] * (max_seq_len - len(tok2char_span)))
-            input_ids = self.text2indices(text, max_seq_len)
-
-            sample_tp = (text_id,
-                     text, 
-                     input_ids,
-                     tok2char_span,
-                    )
-            indexed_samples.append(sample_tp)       
-        return indexed_samples
-    
-    def generate_train_dev_batch(self, batch_data):
-        text_id_list = []
-        text_list = []
+    def generate_batch(self, batch_data, data_type = "train"):
+        sample_list = []
         input_ids_list = []
         tok2char_span_list = []
+        
         ent_spots_list = []
         head_rel_spots_list = []
         tail_rel_spots_list = []
 
-        for sample in batch_data:
-            text_id_list.append(sample[0])
-            text_list.append(sample[1])
-            input_ids_list.append(sample[2])    
-            tok2char_span_list.append(sample[3])
-
-            ent_matrix_spots, head_rel_matrix_spots, tail_rel_matrix_spots = sample[4]
-            ent_spots_list.append(ent_matrix_spots)
-            head_rel_spots_list.append(head_rel_matrix_spots)
-            tail_rel_spots_list.append(tail_rel_matrix_spots)
+        for tp in batch_data:
+            sample_list.append(tp[0])
+            input_ids_list.append(tp[1])    
+            tok2char_span_list.append(tp[2])
+            
+            if data_type != "test":
+                ent_matrix_spots, head_rel_matrix_spots, tail_rel_matrix_spots = tp[3]
+                ent_spots_list.append(ent_matrix_spots)
+                head_rel_spots_list.append(head_rel_matrix_spots)
+                tail_rel_spots_list.append(tail_rel_matrix_spots)
 
         batch_input_ids = torch.stack(input_ids_list, dim = 0)
+        
+        batch_ent_shaking_tag, batch_head_rel_shaking_tag, batch_tail_rel_shaking_tag = None, None, None
+        if data_type != "test":
+            batch_ent_shaking_tag = self.handshaking_tagger.sharing_spots2shaking_tag4batch(ent_spots_list)
+            batch_head_rel_shaking_tag = self.handshaking_tagger.spots2shaking_tag4batch(head_rel_spots_list)
+            batch_tail_rel_shaking_tag = self.handshaking_tagger.spots2shaking_tag4batch(tail_rel_spots_list)
 
-        batch_ent_shaking_tag = self.handshaking_tagger.sharing_spots2shaking_tag4batch(ent_spots_list)
-        batch_head_rel_shaking_tag = self.handshaking_tagger.spots2shaking_tag4batch(head_rel_spots_list)
-        batch_tail_rel_shaking_tag = self.handshaking_tagger.spots2shaking_tag4batch(tail_rel_spots_list)
-
-        return text_id_list, text_list, \
+        return sample_list, \
                 batch_input_ids, tok2char_span_list, \
                 batch_ent_shaking_tag, batch_head_rel_shaking_tag, batch_tail_rel_shaking_tag
-    
-    def generate_pred_batch(self, batch_data):
-        text_ids = []
-        text_list = []
-        input_ids_list = []
-        tok2char_span_list = []
-        for sample in batch_data:
-            text_ids.append(sample[0])
-            text_list.append(sample[1])
-            input_ids_list.append(sample[2])       
-            tok2char_span_list.append(sample[3])
-        batch_input_ids = torch.stack(input_ids_list, dim = 0)
-        return text_ids, text_list, batch_input_ids, tok2char_span_list
     
 class TPLinkerBert(nn.Module):
     def __init__(self, encoder, 
@@ -598,35 +527,29 @@ class MetricsCalculator():
         sample_acc = torch.mean(sample_acc_)
 
         return sample_acc 
-    def get_rel_cpg(self, text_list, offset_map_list, 
+    def get_rel_cpg(self, sample_list, tok2char_span_list, 
                  batch_pred_ent_shaking_outputs,
                  batch_pred_head_rel_shaking_outputs,
-                 batch_pred_tail_rel_shaking_outputs,
-                 batch_gold_ent_shaking_tag,
-                 batch_gold_head_rel_shaking_tag,
-                 batch_gold_tail_rel_shaking_tag):
+                 batch_pred_tail_rel_shaking_outputs):
         batch_pred_ent_shaking_tag = torch.argmax(batch_pred_ent_shaking_outputs, dim = -1)
         batch_pred_head_rel_shaking_tag = torch.argmax(batch_pred_head_rel_shaking_outputs, dim = -1)
         batch_pred_tail_rel_shaking_tag = torch.argmax(batch_pred_tail_rel_shaking_outputs, dim = -1)
 
         correct_num, pred_num, gold_num = 0, 0, 0
-        for ind in range(len(text_list)):
-            text = text_list[ind]
-            offset_map = offset_map_list[ind]
-            gold_ent_shaking_tag, pred_ent_shaking_tag = batch_gold_ent_shaking_tag[ind], batch_pred_ent_shaking_tag[ind]
-            gold_head_rel_shaking_tag, pred_head_rel_shaking_tag = batch_gold_head_rel_shaking_tag[ind], batch_pred_head_rel_shaking_tag[ind]
-            gold_tail_rel_shaking_tag, pred_tail_rel_shaking_tag = batch_gold_tail_rel_shaking_tag[ind], batch_pred_tail_rel_shaking_tag[ind]
+        for ind in range(len(sample_list)):
+            sample = sample_list[ind]
+            text = sample["text"]
+            tok2char_span = tok2char_span_list[ind]
+            pred_ent_shaking_tag = batch_pred_ent_shaking_tag[ind]
+            pred_head_rel_shaking_tag = batch_pred_head_rel_shaking_tag[ind]
+            pred_tail_rel_shaking_tag = batch_pred_tail_rel_shaking_tag[ind]
 
             pred_rel_list = self.handshaking_tagger.decode_rel_fr_shaking_tag(text, 
                                                       pred_ent_shaking_tag, 
                                                       pred_head_rel_shaking_tag, 
                                                       pred_tail_rel_shaking_tag, 
-                                                      offset_map)
-            gold_rel_list = self.handshaking_tagger.decode_rel_fr_shaking_tag(text, 
-                                                      gold_ent_shaking_tag, 
-                                                      gold_head_rel_shaking_tag, 
-                                                      gold_tail_rel_shaking_tag, 
-                                                      offset_map)
+                                                      tok2char_span)
+            gold_rel_list = sample["relation_list"]
 
             gold_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in gold_rel_list])
             pred_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in pred_rel_list])

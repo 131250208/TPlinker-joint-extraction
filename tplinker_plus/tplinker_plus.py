@@ -115,7 +115,8 @@ class HandshakingTaggingScheme(object):
     def decode_rel(self,
               text, 
               shaking_tag,
-              tok2char_span):
+              tok2char_span, 
+              tok_offset = 0, char_offset = 0):
         '''
         shaking_tag: (shaking_seq_len, tag_id)
         '''
@@ -186,10 +187,10 @@ class HandshakingTaggingScheme(object):
                     rel_list.append({
                         "subject": subj["text"],
                         "object": obj["text"],
-                        "subj_tok_span": subj["tok_span"],
-                        "obj_tok_span": obj["tok_span"],
-                        "subj_char_span": subj["char_span"],
-                        "obj_char_span": obj["char_span"],
+                        "subj_tok_span": [subj["tok_span"][0] + tok_offset, subj["tok_span"][1] + tok_offset],
+                        "obj_tok_span": [obj["tok_span"][0] + tok_offset, obj["tok_span"][1] + tok_offset],
+                        "subj_char_span": [subj["char_span"][0] + char_offset, subj["char_span"][1] + char_offset],
+                        "obj_char_span": [obj["char_span"][0] + char_offset, obj["char_span"][1] + char_offset],
                         "predicate": rel,
                     })
         return rel_list
@@ -199,11 +200,10 @@ class DataMaker4Bert():
         self.tokenizer = tokenizer
         self.shaking_tagger = shaking_tagger
     
-    def get_indexed_train_valid_data(self, data, max_seq_len):
+    def get_indexed_data(self, data, max_seq_len, data_type = "train"):
         indexed_samples = []
         for ind, sample in tqdm(enumerate(data), desc = "Generate indexed train or valid data"):
             text = sample["text"]
-            text_id = sample["id"]
             # codes for bert input
             codes = self.tokenizer.encode_plus(text, 
                                     return_offsets_mapping = True, 
@@ -213,7 +213,9 @@ class DataMaker4Bert():
 
 
             # tagging
-            matrix_spots = self.shaking_tagger.get_spots(sample)
+            matrix_spots = None
+            if data_type != "test":
+                matrix_spots = self.shaking_tagger.get_spots(sample)
 
             # get codes
             input_ids = torch.tensor(codes["input_ids"]).long()
@@ -221,8 +223,7 @@ class DataMaker4Bert():
             token_type_ids = torch.tensor(codes["token_type_ids"]).long()
             tok2char_span = codes["offset_mapping"]
 
-            sample_tp = (text_id,
-                     text, 
+            sample_tp = (sample, 
                      input_ids,
                      attention_mask,
                      token_type_ids,
@@ -231,81 +232,36 @@ class DataMaker4Bert():
                     )
             indexed_samples.append(sample_tp)       
         return indexed_samples
-    
-    def get_indexed_pred_data(self, data, max_seq_len):
-        indexed_samples = []
-        for ind, sample in tqdm(enumerate(data), desc = "Generate indexed pred data"):
-            text = sample["text"] 
-            text_id = sample["id"]
-            # @specific
-            codes = self.tokenizer.encode_plus(text, 
-                                    return_offsets_mapping = True, 
-                                    add_special_tokens = False,
-                                    max_length = max_seq_len, 
-                                    pad_to_max_length = True)
 
-            input_ids = torch.tensor(codes["input_ids"]).long()
-            attention_mask = torch.tensor(codes["attention_mask"]).long()
-            token_type_ids = torch.tensor(codes["token_type_ids"]).long()
-            tok2char_span = codes["offset_mapping"]
-
-            sample_tp = (text_id,
-                     text, 
-                     input_ids,
-                     attention_mask,
-                     token_type_ids,
-                     tok2char_span,
-                     )
-            indexed_samples.append(sample_tp)       
-        return indexed_samples
-    
-    def generate_train_dev_batch(self, batch_data):
-        text_id_list = []
-        text_list = []
+    def generate_batch(self, batch_data, data_type = "train"):
+        sample_list = []
         input_ids_list = []
         attention_mask_list = []
         token_type_ids_list = [] 
         tok2char_span_list = []
         matrix_spots_list = []
 
-        for sample in batch_data:
-            text_id_list.append(sample[0])
-            text_list.append(sample[1])
-            input_ids_list.append(sample[2])
-            attention_mask_list.append(sample[3])        
-            token_type_ids_list.append(sample[4])        
-            tok2char_span_list.append(sample[5])
-            matrix_spots_list.append(sample[6])
+        for tp in batch_data:
+            sample_list.append(tp[0])
+            input_ids_list.append(tp[1])
+            attention_mask_list.append(tp[2])        
+            token_type_ids_list.append(tp[3])        
+            tok2char_span_list.append(tp[4])
+            if data_type != "test":
+                matrix_spots_list.append(tp[5])
 
         # @specific: indexed by bert tokenizer
         batch_input_ids = torch.stack(input_ids_list, dim = 0)
         batch_attention_mask = torch.stack(attention_mask_list, dim = 0)
         batch_token_type_ids = torch.stack(token_type_ids_list, dim = 0)
+        
+        batch_shaking_tag = None
+        if data_type != "test":
+            batch_shaking_tag = self.shaking_tagger.spots2shaking_tag4batch(matrix_spots_list)
 
-        batch_shaking_tag = self.shaking_tagger.spots2shaking_tag4batch(matrix_spots_list)
-
-        return text_id_list, text_list, \
+        return sample_list, \
               batch_input_ids, batch_attention_mask, batch_token_type_ids, tok2char_span_list, \
                 batch_shaking_tag
-    
-    def generate_pred_batch(self, batch_data):
-        text_ids = []
-        text_list = []
-        input_ids_list = []
-        attention_mask_list = []
-        token_type_ids_list = [] 
-        tok2char_span_list = []
-        for sample in batch_data:
-            text_ids.append(sample[0])
-            text_list.append(sample[1])
-            input_ids_list.append(sample[2])
-            attention_mask_list.append(sample[3])        
-            token_type_ids_list.append(sample[4])        
-            tok2char_span_list.append(sample[5])
-        batch_input_ids = torch.stack(input_ids_list, dim = 0)
-        batch_attention_mask = torch.stack(attention_mask_list, dim = 0)
-        batch_token_type_ids = torch.stack(token_type_ids_list, dim = 0)
-        return text_ids, text_list, batch_input_ids, batch_attention_mask, batch_token_type_ids, tok2char_span_list
 
 class DataMaker4BiLSTM():
     def __init__(self, text2indices, get_tok2char_span_map, shaking_tagger):
@@ -313,79 +269,48 @@ class DataMaker4BiLSTM():
         self.shaking_tagger = shaking_tagger
         self.get_tok2char_span_map = get_tok2char_span_map
         
-    def get_indexed_train_valid_data(self, data, max_seq_len):
+    def get_indexed_data(self, data, max_seq_len, data_type = "train"):
         indexed_samples = []
         for ind, sample in tqdm(enumerate(data), desc = "Generate indexed train or valid data"):
             text = sample["text"]
-            text_id = sample["id"]
-
             # tagging
-            matrix_spots = self.shaking_tagger.get_spots(sample)
+            matrix_spots = None
+            if data_type != "test":
+                matrix_spots = self.shaking_tagger.get_spots(sample)
             tok2char_span = self.get_tok2char_span_map(text)
             tok2char_span.extend([(-1, -1)] * (max_seq_len - len(tok2char_span)))
             input_ids = self.text2indices(text, max_seq_len)
 
-            sample_tp = (text_id,
-                     text, 
+            sample_tp = (sample, 
                      input_ids,
                      tok2char_span,
                      matrix_spots,
                     )
             indexed_samples.append(sample_tp)       
         return indexed_samples
-    
-    def get_indexed_pred_data(self, data, max_seq_len):
-        indexed_samples = []
-        for ind, sample in tqdm(enumerate(data), desc = "Generate indexed pred data"):
-            text = sample["text"]
-            text_id = sample["id"]
-
-            tok2char_span = self.get_tok2char_span_map(text)
-            tok2char_span.extend([(-1, -1)] * (max_seq_len - len(tok2char_span)))
-            input_ids = self.text2indices(text, max_seq_len)
-
-            sample_tp = (text_id,
-                     text, 
-                     input_ids,
-                     tok2char_span,
-                    )
-            indexed_samples.append(sample_tp)       
-        return indexed_samples
-    
-    def generate_train_dev_batch(self, batch_data):
-        text_id_list = []
-        text_list = []
+  
+    def generate_batch(self, batch_data, data_type = "train"):
+        sample_list = []
         input_ids_list = []
         tok2char_span_list = []
         matrix_spots_list = []
 
-        for sample in batch_data:
-            text_id_list.append(sample[0])
-            text_list.append(sample[1])
-            input_ids_list.append(sample[2])    
-            tok2char_span_list.append(sample[3])
-            matrix_spots_list.append(sample[4])
+        for tp in batch_data:
+            sample_list.append(tp[0])
+            input_ids_list.append(tp[1])    
+            tok2char_span_list.append(tp[2])
+            if data_type != "test":
+                matrix_spots_list.append(tp[3])
 
         batch_input_ids = torch.stack(input_ids_list, dim = 0)
-
-        batch_shaking_tag = self.shaking_tagger.spots2shaking_tag4batch(matrix_spots_list)
         
-        return text_id_list, text_list, \
+        batch_shaking_tag = None
+        if data_type != "test":
+            batch_shaking_tag = self.shaking_tagger.spots2shaking_tag4batch(matrix_spots_list)
+        
+        return sample_list, \
                 batch_input_ids, tok2char_span_list, \
                 batch_shaking_tag
-    
-    def generate_pred_batch(self, batch_data):
-        text_ids = []
-        text_list = []
-        input_ids_list = []
-        tok2char_span_list = []
-        for sample in batch_data:
-            text_ids.append(sample[0])
-            text_list.append(sample[1])
-            input_ids_list.append(sample[2])       
-            tok2char_span_list.append(sample[3])
-        batch_input_ids = torch.stack(input_ids_list, dim = 0)
-        return text_ids, text_list, batch_input_ids, tok2char_span_list
 
 class TPLinkerPlusBert(nn.Module):
     def __init__(self, encoder, 
@@ -533,23 +458,21 @@ class MetricsCalculator():
 
         return sample_acc 
     
-    def get_rel_cpg(self, text_list, 
+    def get_rel_cpg(self, sample_list, 
                    tok2char_span_list, 
-                   batch_pred_shaking_tag, 
-                   batch_gold_shaking_tag):
+                   batch_pred_shaking_tag):
 
         correct_num, pred_num, gold_num = 0, 0, 0
-        for ind in range(len(text_list)):
-            text = text_list[ind]
+        for ind in range(len(sample_list)):
+            sample = sample_list[ind]
+            text = sample["text"]
             tok2char_span = tok2char_span_list[ind]
-            gold_shaking_tag, pred_shaking_tag = batch_gold_shaking_tag[ind], batch_pred_shaking_tag[ind]
+            pred_shaking_tag = batch_pred_shaking_tag[ind]
 
             pred_rel_list = self.shaking_tagger.decode_rel(text, 
                                         pred_shaking_tag, 
                                         tok2char_span)
-            gold_rel_list = self.shaking_tagger.decode_rel(text, 
-                                        gold_shaking_tag,
-                                        tok2char_span)
+            gold_rel_list = sample["relation_list"]
             gold_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in gold_rel_list])
             pred_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in pred_rel_list])
 

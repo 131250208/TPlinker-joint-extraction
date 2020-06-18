@@ -83,12 +83,14 @@ class Preprocessor:
                 end_ind = start_ind + max_seq_len
 
                 char_span_list = tok2char_span[start_ind:end_ind]
-                char_level_span = (char_span_list[0][0], char_span_list[-1][1])
+                char_level_span = [char_span_list[0][0], char_span_list[-1][1]]
                 sub_text = text[char_level_span[0]:char_level_span[1]]
 
                 new_sample = {
                     "id": text_id,
-                    "text": sub_text
+                    "text": sub_text,
+                    "tok_offset": start_ind,
+                    "char_offset": char_level_span[0],
                     }
                 if data_type == "test":
                     if len(sub_text) > 0:
@@ -102,8 +104,12 @@ class Preprocessor:
                         if subj_tok_span[0] >= start_ind and subj_tok_span[1] <= end_ind \
                             and obj_tok_span[0] >= start_ind and obj_tok_span[1] <= end_ind: 
                             new_rel = copy.deepcopy(rel)
-                            new_rel["subj_tok_span"] = (subj_tok_span[0] - start_ind, subj_tok_span[1] - start_ind)
-                            new_rel["obj_tok_span"] = (obj_tok_span[0] - start_ind, obj_tok_span[1] - start_ind)
+                            new_rel["subj_tok_span"] = [subj_tok_span[0] - start_ind, subj_tok_span[1] - start_ind]
+                            new_rel["obj_tok_span"] = [obj_tok_span[0] - start_ind, obj_tok_span[1] - start_ind]
+                            new_rel["subj_char_span"][0] -= char_level_span[0]
+                            new_rel["subj_char_span"][1] -= char_level_span[0]
+                            new_rel["obj_char_span"][0] -= char_level_span[0]
+                            new_rel["obj_char_span"][1] -= char_level_span[0]
                             sub_rel_list.append(new_rel)
 
                     if len(sub_rel_list) > 0:
