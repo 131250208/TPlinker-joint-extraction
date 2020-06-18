@@ -1,3 +1,10 @@
+*data*/
+wandb/
+*.json
+*.yaml
+*.pt
+*.emb
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
