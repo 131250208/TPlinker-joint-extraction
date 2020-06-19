@@ -68,16 +68,11 @@ torch.backends.cudnn.deterministic = True
 # In[ ]:
 
 
-experiment_name = config["experiment_name"]    
-train_data_path = os.path.join(*config["train_data"])
-valid_data_path = os.path.join(*config["valid_data"])
-test_data_dir = os.path.join(*config["test_data_dir"])
-test_data_path_dict = {}
-for path, folds, files in os.walk(test_data_dir):
-    for file_name in files:
-        file_path = os.path.join(path, file_name)
-        file_name = re.match("(.*?)\.json", file_name).group(1)
-        test_data_path_dict[file_name] = file_path
+data_home = config["data_home"]
+experiment_name = config["exp_name"]    
+train_data_path = os.path.join(data_home, experiment_name, config["train_data"])
+valid_data_path = os.path.join(data_home, experiment_name, config["valid_data"])
+rel2id_path = os.path.join(data_home, experiment_name, config["rel2id"])
 
 
 # In[ ]:
@@ -106,9 +101,6 @@ else:
 
 train_data = json.load(open(train_data_path, "r", encoding = "utf-8"))
 valid_data = json.load(open(valid_data_path, "r", encoding = "utf-8"))
-test_data_dict = {}
-for file_name, path in test_data_path_dict.items():
-    test_data_dict[file_name] = json.load(open(path, "r", encoding = "utf-8"))
 
 
 # # Split
@@ -181,7 +173,6 @@ print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
 
 
 max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
-rel2id_path = os.path.join(*config["rel2id_path"])
 rel2id = json.load(open(rel2id_path, "r", encoding = "utf-8"))
 handshaking_tagger = HandshakingTaggingScheme(rel2id = rel2id, max_seq_len = max_seq_len)
 
@@ -196,7 +187,7 @@ if config["encoder"] == "BERT":
     data_maker = DataMaker4Bert(tokenizer, handshaking_tagger)
     
 elif config["encoder"] in {"BiLSTM", }:
-    token2idx_path = os.path.join(*config["token2idx_path"])
+    token2idx_path = os.path.join(data_home, experiment_name, config["token2idx"])
     token2idx = json.load(open(token2idx_path, "r", encoding = "utf-8"))
     idx2token = {idx:tok for tok, idx in token2idx.items()}
     def text2indices(text, max_seq_len):

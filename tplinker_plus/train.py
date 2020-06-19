@@ -21,14 +21,12 @@ import torch.optim as optim
 import glob
 import time
 import logging
-from tplinker_fast_v2 import (Preprocessor, 
-                          HandshakingTaggingScheme, 
-                          LayerNorm, 
+from common.utils import Preprocessor, DefaultLogger
+from tplinker_plus import (HandshakingTaggingScheme,
                           DataMaker4Bert, 
                           DataMaker4BiLSTM, 
-                          TPLinkerFastBert, 
-                          TPLinkerFastBiLSTM, 
-                          DefaultLogger,
+                          TPLinkerPlusBert, 
+                          TPLinkerPlusBiLSTM,
                           MetricsCalculator)
 import wandb
 import yaml
@@ -71,16 +69,11 @@ torch.backends.cudnn.deterministic = True
 # In[ ]:
 
 
-experiment_name = config["experiment_name"]    
-train_data_path = os.path.join(*config["train_data"])
-valid_data_path = os.path.join(*config["valid_data"])
-test_data_dir = os.path.join(*config["test_data_dir"])
-test_data_path_dict = {}
-for path, folds, files in os.walk(test_data_dir):
-    for file_name in files:
-        file_path = os.path.join(path, file_name)
-        file_name = re.match("(.*?)\.json", file_name).group(1)
-        test_data_path_dict[file_name] = file_path
+data_home = config["data_home"]
+experiment_name = config["exp_name"]    
+train_data_path = os.path.join(data_home, experiment_name, config["train_data"])
+valid_data_path = os.path.join(data_home, experiment_name, config["valid_data"])
+rel2id_path = os.path.join(data_home, experiment_name, config["rel2id"])
 
 
 # In[ ]:
@@ -100,6 +93,8 @@ if config["logger"] == "wandb":
 else:
     logger = DefaultLogger(config["log_path"], experiment_name, config["run_name"], hyper_parameters)
     model_state_dict_dir = config["path_to_save_model"]
+    if not os.path.exists(model_state_dict_dir):
+        os.makedirs(model_state_dict_dir)
 
 
 # # Load Data
@@ -109,9 +104,6 @@ else:
 
 train_data = json.load(open(train_data_path, "r", encoding = "utf-8"))
 valid_data = json.load(open(valid_data_path, "r", encoding = "utf-8"))
-test_data_dict = {}
-for file_name, path in test_data_path_dict.items():
-    test_data_dict[file_name] = json.load(open(path, "r", encoding = "utf-8"))
 
 
 # # Split
@@ -184,7 +176,6 @@ print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
 
 
 max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
-rel2id_path = os.path.join(*config["rel2id_path"])
 rel2id = json.load(open(rel2id_path, "r", encoding = "utf-8"))
 handshaking_tagger = HandshakingTaggingScheme(rel2id, max_seq_len)
 tag_size = handshaking_tagger.get_tag_size()
@@ -201,15 +192,15 @@ def sample_equal_to(sample1, sample2):
         memory = "{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(rel["subject"], 
                                                              rel["predicate"], 
                                                              rel["object"], 
-                                                             *rel["subj_span"], 
-                                                             *rel["obj_span"])
+                                                             *rel["subj_tok_span"], 
+                                                             *rel["obj_tok_span"])
         memory_set.add(memory)
     for rel in sample1["relation_list"]:
         memory = "{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(rel["subject"], 
                                                              rel["predicate"], 
                                                              rel["object"], 
-                                                             *rel["subj_span"], 
-                                                             *rel["obj_span"])
+                                                             *rel["subj_tok_span"], 
+                                                             *rel["obj_tok_span"])
         if memory not in memory_set:
             set_trace()
             return False
@@ -219,37 +210,37 @@ def sample_equal_to(sample1, sample2):
 # In[ ]:
 
 
-# # check tagging and decoding
-# batch_size = hyper_parameters["batch_size"]
-# for idx in tqdm(range(0, len(train_data), batch_size)):
-#     batch_matrix_spots = []
-#     batch_data = train_data[idx:idx + batch_size]
-#     for sample in batch_data:
-#         matrix_spots = handshaking_tagger.get_spots(sample)
-# #         %timeit shaking_tagger.get_spots(sample)
-#         batch_matrix_spots.append(matrix_spots)
+# check tagging and decoding
+batch_size = hyper_parameters["batch_size"]
+for idx in tqdm(range(0, len(train_data), batch_size)):
+    batch_matrix_spots = []
+    batch_data = train_data[idx:idx + batch_size]
+    for sample in batch_data:
+        matrix_spots = handshaking_tagger.get_spots(sample)
+#         %timeit shaking_tagger.get_spots(sample)
+        batch_matrix_spots.append(matrix_spots)
     
-#     # tagging
-#     # batch_shaking_tag: (batch_size, rel_id, seq_len, seq_len)
-#     batch_shaking_tag = handshaking_tagger.spots2shaking_tag4batch(batch_matrix_spots)
-# #     %timeit shaking_tagger.spots2shaking_tag4batch(batch_matrix_spots) #0.3s
+    # tagging
+    # batch_shaking_tag: (batch_size, rel_id, seq_len, seq_len)
+    batch_shaking_tag = handshaking_tagger.spots2shaking_tag4batch(batch_matrix_spots)
+#     %timeit shaking_tagger.spots2shaking_tag4batch(batch_matrix_spots) #0.3s
     
-#     for batch_idx in range(len(batch_data)):
-#         gold_sample = batch_data[batch_idx]
-#         shaking_tag = batch_shaking_tag[batch_idx]
-#         # decode
-#         text = batch_data[batch_idx]["text"]
-#         tok2char_span = get_tok2char_span_map(text)
-#         rel_list = handshaking_tagger.decode_rel(text, shaking_tag, tok2char_span)
-#         pred_sample = {
-#             "text": text,
-#             "id": gold_sample["id"],
-#             "relation_list": rel_list,
-#         }
+    for batch_idx in range(len(batch_data)):
+        gold_sample = batch_data[batch_idx]
+        shaking_tag = batch_shaking_tag[batch_idx]
+        # decode
+        text = batch_data[batch_idx]["text"]
+        tok2char_span = get_tok2char_span_map(text)
+        rel_list = handshaking_tagger.decode_rel(text, shaking_tag, tok2char_span)
+        pred_sample = {
+            "text": text,
+            "id": gold_sample["id"],
+            "relation_list": rel_list,
+        }
         
         
-#         if not sample_equal_to(pred_sample, gold_sample) or not sample_equal_to(gold_sample, pred_sample):
-#             set_trace()
+        if not sample_equal_to(pred_sample, gold_sample) or not sample_equal_to(gold_sample, pred_sample):
+            set_trace()
 
 
 # # Dataset
@@ -262,7 +253,7 @@ if config["encoder"] == "BERT":
     data_maker = DataMaker4Bert(tokenizer, handshaking_tagger)
     
 elif config["encoder"] in {"BiLSTM", }:
-    token2idx_path = os.path.join(*config["token2idx_path"])
+    token2idx_path = os.path.join(data_home, experiment_name, config["token2idx"])
     token2idx = json.load(open(token2idx_path, "r", encoding = "utf-8"))
     idx2token = {idx:tok for tok, idx in token2idx.items()}
     def text2indices(text, max_seq_len):
@@ -297,8 +288,8 @@ class MyDataset(Dataset):
 # In[ ]:
 
 
-indexed_train_data = data_maker.get_indexed_train_valid_data(train_data, max_seq_len)
-indexed_valid_data = data_maker.get_indexed_train_valid_data(valid_data, max_seq_len)
+indexed_train_data = data_maker.get_indexed_data(train_data, max_seq_len)
+indexed_valid_data = data_maker.get_indexed_data(valid_data, max_seq_len)
 
 
 # In[ ]:
@@ -309,14 +300,14 @@ train_dataloader = DataLoader(MyDataset(indexed_train_data),
                                   shuffle = True, 
                                   num_workers = 6,
                                   drop_last = False,
-                                  collate_fn = data_maker.generate_train_dev_batch,
+                                  collate_fn = data_maker.generate_batch,
                                  )
 valid_dataloader = DataLoader(MyDataset(indexed_valid_data), 
                           batch_size = hyper_parameters["batch_size"], 
                           shuffle = True, 
                           num_workers = 6,
                           drop_last = False,
-                          collate_fn = data_maker.generate_train_dev_batch,
+                          collate_fn = data_maker.generate_batch,
                          )
 
 
@@ -357,7 +348,7 @@ if config["encoder"] == "BERT":
     roberta = AutoModel.from_pretrained(config["bert_path"])
     hidden_size = roberta.config.hidden_size
     fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size])
-    rel_extractor = TPLinkerFastBert(roberta, 
+    rel_extractor = TPLinkerPlusBert(roberta, 
                                      tag_size,
                                      fake_inputs,
                                      hyper_parameters["shaking_type"],
@@ -383,7 +374,7 @@ elif config["encoder"] in {"BiLSTM", }:
     word_embedding_init_matrix = torch.FloatTensor(word_embedding_init_matrix)
     
     fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hyper_parameters["dec_hidden_size"]])
-    rel_extractor = TPLinkerFastBiLSTM(word_embedding_init_matrix, 
+    rel_extractor = TPLinkerPlusBiLSTM(word_embedding_init_matrix, 
                                        hyper_parameters["emb_dropout"], 
                                        hyper_parameters["enc_hidden_size"], 
                                        hyper_parameters["dec_hidden_size"],
@@ -429,8 +420,8 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
     zeros = torch.zeros_like(y_pred[..., :1]) # st - st
     y_pred_neg = torch.cat([y_pred_neg, zeros], dim = -1)
     y_pred_pos = torch.cat([y_pred_pos, zeros], dim = -1)
-    neg_loss = torch.logsumexp(y_pred_neg + 1, dim = -1) # +1: si - (-1), make -1 > si
-    pos_loss = torch.logsumexp(y_pred_pos + 1, dim = -1) # +1: 1 - sj, make sj > 1
+    neg_loss = torch.logsumexp(y_pred_neg, dim = -1) # +1: si - (-1), make -1 > si
+    pos_loss = torch.logsumexp(y_pred_pos, dim = -1) # +1: 1 - sj, make sj > 1
     return (neg_loss + pos_loss).mean()
 loss_func = multilabel_categorical_crossentropy
 
@@ -449,7 +440,7 @@ metrics = MetricsCalculator(handshaking_tagger)
 # train step
 def train_step(batch_train_data, optimizer):
     if config["encoder"] == "BERT":
-        text_id_list, text_list, batch_input_ids,         batch_attention_mask, batch_token_type_ids,         tok2char_span_list, batch_shaking_tag = batch_train_data
+        sample_list, batch_input_ids,         batch_attention_mask, batch_token_type_ids,         tok2char_span_list, batch_shaking_tag = batch_train_data
         
         batch_input_ids,         batch_attention_mask,         batch_token_type_ids,         batch_shaking_tag = (batch_input_ids.to(device), 
                               batch_attention_mask.to(device), 
@@ -458,7 +449,7 @@ def train_step(batch_train_data, optimizer):
                              )
         
     elif config["encoder"] in {"BiLSTM", }:
-        text_id_list, text_list, batch_input_ids,         tok2char_span_list, batch_shaking_tag = batch_train_data
+        sample_list, batch_input_ids,         tok2char_span_list, batch_shaking_tag = batch_train_data
         
         batch_input_ids,         batch_shaking_tag = (batch_input_ids.to(device), 
                               batch_shaking_tag.to(device)
@@ -494,7 +485,7 @@ def train_step(batch_train_data, optimizer):
 # valid step
 def valid_step(batch_valid_data):
     if config["encoder"] == "BERT":
-        text_id_list, text_list, batch_input_ids,         batch_attention_mask, batch_token_type_ids,         tok2char_span_list, batch_shaking_tag = batch_valid_data
+        sample_list, batch_input_ids,         batch_attention_mask, batch_token_type_ids,         tok2char_span_list, batch_shaking_tag = batch_valid_data
         
         batch_input_ids,         batch_attention_mask,         batch_token_type_ids,         batch_shaking_tag = (batch_input_ids.to(device), 
                                       batch_attention_mask.to(device), 
@@ -503,7 +494,7 @@ def valid_step(batch_valid_data):
                                      )
         
     elif config["encoder"] in {"BiLSTM", }:
-        text_id_list, text_list, batch_input_ids,         tok2char_span_list, batch_shaking_tag = batch_valid_data
+        sample_list, batch_input_ids,         tok2char_span_list, batch_shaking_tag = batch_valid_data
         
         batch_input_ids,         batch_shaking_tag = (batch_input_ids.to(device), 
                               batch_shaking_tag.to(device)
@@ -521,10 +512,9 @@ def valid_step(batch_valid_data):
     sample_acc = metrics.get_sample_accuracy(pred_shaking_tag,
                                              batch_shaking_tag)
     
-    rel_cpg = metrics.get_rel_cpg(text_list, 
+    rel_cpg = metrics.get_rel_cpg(sample_list, 
                                   tok2char_span_list, 
-                                  pred_shaking_tag,
-                                  batch_shaking_tag)
+                                  pred_shaking_tag)
     return sample_acc.item(), rel_cpg
 
 
@@ -637,7 +627,7 @@ def train_n_valid(train_dataloader, dev_dataloader, optimizer, scheduler, num_ep
 
 
 # optimizer
-init_learning_rate = hyper_parameters["lr"]
+init_learning_rate = float(hyper_parameters["lr"])
 optimizer = torch.optim.Adam(rel_extractor.parameters(), lr = init_learning_rate)
 
 

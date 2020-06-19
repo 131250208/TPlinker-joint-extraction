@@ -64,7 +64,7 @@ class Preprocessor:
             normal_sample["relation_list"] = normal_rel_list
             normal_sample_list.append(normal_sample)
             
-        return self._clean(normal_sample_list)
+        return self._clean_sp_char(normal_sample_list)
     
     def split_into_short_samples(self, sample_list, max_seq_len, sliding_len = 50, encoder = "BERT", data_type = "train"):
         new_sample_list = []
@@ -122,7 +122,7 @@ class Preprocessor:
             new_sample_list.extend(split_sample_list)
         return new_sample_list
     
-    def _clean(self, dataset):
+    def _clean_sp_char(self, dataset):
         def clean_text(text):
             text = re.sub("�", "", text)
 #             text = re.sub("([A-Za-z]+)", r" \1 ", text)
@@ -135,6 +135,69 @@ class Preprocessor:
                 rel["subject"] = clean_text(rel["subject"])
                 rel["object"] = clean_text(rel["object"])
         return dataset
+        
+    def clean_data_wo_span(self, ori_data, separate = False, data_type = "train"):
+        '''
+        rm duplicate whitespaces
+        and add whitespaces around tokens to keep special characters from them
+        '''
+        def clean_text(text):
+            text = re.sub("\s+", " ", text).strip()
+            if separate:
+                text = re.sub("([^A-Za-z0-9])", r" \1 ", text)
+                text = re.sub("\s+", " ", text).strip()
+            return text
+
+        for sample in tqdm(ori_data, desc = "separate characters by white"):
+            sample["text"] = clean_text(sample["text"])
+            if data_type == "test":
+                continue
+            for rel in sample["relation_list"]:
+                rel["subject"] = clean_text(rel["subject"])
+                rel["object"] = clean_text(rel["object"])
+        return ori_data
+
+    def clean_data_w_span(self, ori_data):
+        '''
+        add a stake to bad samples(char span error) and remove them from the clean data
+        '''
+        bad_samples, clean_data = [], []
+        def strip_white(entity, entity_char_span):
+            p = 0
+            while entity[p] == " ":
+                entity_char_span[0] += 1
+                p += 1
+
+            p = len(entity) - 1
+            while entity[p] == " ":
+                entity_char_span[1] -= 1
+                p -= 1
+            return entity.strip(), entity_char_span
+            
+        for sample in tqdm(ori_data, desc = "cleaning"):
+            text = sample["text"]
+
+            bad = False
+            for rel in sample["relation_list"]:
+                # rm whitespaces
+                rel["subject"], rel["subj_char_span"] = strip_white(rel["subject"], rel["subj_char_span"])
+                rel["object"], rel["obj_char_span"] = strip_white(rel["object"], rel["obj_char_span"])
+
+                subj_char_span = rel["subj_char_span"]
+                obj_char_span = rel["obj_char_span"]
+                if rel["subject"] not in text or rel["subject"] != text[subj_char_span[0]:subj_char_span[1]] or \
+                    rel["object"] not in text or rel["object"] != text[obj_char_span[0]:obj_char_span[1]]:
+                    rel["stake"] = 0
+                    bad = True
+                    
+            if bad:
+                bad_samples.append(copy.deepcopy(sample))
+
+            new_rel_list = [rel for rel in sample["relation_list"] if "stake" not in rel]
+            if len(new_rel_list) > 0:
+                sample["relation_list"] = new_rel_list
+                clean_data.append(sample)
+        return clean_data, bad_samples
     
     def _get_char2tok_span(self, text):
         '''
@@ -156,23 +219,30 @@ class Preprocessor:
                 tok_sp[1] = tok_ind + 1
         return char2tok_span
 
-    def _get_ent2char_spans(self, text, entities):
+    def _get_ent2char_spans(self, text, entities, ignore_subword = True):
+        '''
+        if ignore_subword, look for entities with whitespace around, e.g. "entity" -> " entity "
+        '''
         entities = sorted(entities, key = lambda x: len(x), reverse = True)
-        text_cp = " {} ".format(text[:])
+        text_cp = " {} ".format(text) if ignore_subword else text
         ent2char_spans = {}
         for ent in entities:
             spans = []
-            for m in re.finditer(re.escape(" {} ".format(ent)), text_cp):
-                span = (m.span()[0], m.span()[1] - 2)
+            target_ent = " {} ".format(ent) if ignore_subword else ent
+            for m in re.finditer(re.escape(target_ent), text_cp):
+                span = [m.span()[0], m.span()[1] - 2] if ignore_subword else m.span()
                 spans.append(span)
+#             if len(spans) == 0:
+#                 set_trace()
             ent2char_spans[ent] = spans
         return ent2char_spans
     
-    def add_char_spans(self, dataset):
+    def add_char_span(self, dataset, ignore_subword = True):
+        miss_sample_list = []
         for sample in tqdm(dataset, desc = "Adding char level spans"):
             entities = [rel["subject"] for rel in sample["relation_list"]]
             entities.extend([rel["object"] for rel in sample["relation_list"]])
-            ent2char_spans = self._get_ent2char_spans(sample["text"], entities)
+            ent2char_spans = self._get_ent2char_spans(sample["text"], entities, ignore_subword = ignore_subword)
             
             new_relation_list = []
             for rel in sample["relation_list"]:
@@ -187,9 +257,12 @@ class Preprocessor:
                             "obj_char_span": obj_sp,
                             "predicate": rel["predicate"],
                         })
+            if len(sample["relation_list"]) > len(new_relation_list):
+                miss_sample_list.append(sample)
             sample["relation_list"] = new_relation_list
-                           
-    def add_tok_spans(self, dataset):
+        return dataset, miss_sample_list
+           
+    def add_tok_span(self, dataset):
         '''
         dataset must has char level span
         '''      
@@ -206,4 +279,4 @@ class Preprocessor:
                 obj_char_span = rel["obj_char_span"]
                 rel["subj_tok_span"] = char_span2tok_span(subj_char_span, char2tok_span)
                 rel["obj_tok_span"] = char_span2tok_span(obj_char_span, char2tok_span)
-            
+        return dataset

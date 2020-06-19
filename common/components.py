@@ -105,9 +105,7 @@ class HandshakingKernel(nn.Module):
         '''
         seq_hiddens: (batch_size, seq_len, hidden_size)
         return:
-            shaking_hiddenss: 
-                cln: (batch_size, (1 + seq_len) * seq_len / 2, hidden_size) (32, 5+4+3+2+1, 5)
-                cat: (batch_size, (1 + seq_len) * seq_len / 2, hidden_size * 2)
+            shaking_hiddenss: (batch_size, (1 + seq_len) * seq_len / 2, hidden_size) (32, 5+4+3+2+1, 5)
         '''
         seq_len = seq_hiddens.size()[-2]
         shaking_hiddens_list = []
