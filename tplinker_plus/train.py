@@ -210,37 +210,37 @@ def sample_equal_to(sample1, sample2):
 # In[ ]:
 
 
-# check tagging and decoding
-batch_size = hyper_parameters["batch_size"]
-for idx in tqdm(range(0, len(train_data), batch_size)):
-    batch_matrix_spots = []
-    batch_data = train_data[idx:idx + batch_size]
-    for sample in batch_data:
-        matrix_spots = handshaking_tagger.get_spots(sample)
-#         %timeit shaking_tagger.get_spots(sample)
-        batch_matrix_spots.append(matrix_spots)
+# # check tagging and decoding
+# batch_size = hyper_parameters["batch_size"]
+# for idx in tqdm(range(0, len(train_data), batch_size), desc = "check tagging and decoding"):
+#     batch_matrix_spots = []
+#     batch_data = train_data[idx:idx + batch_size]
+#     for sample in batch_data:
+#         matrix_spots = handshaking_tagger.get_spots(sample)
+# #         %timeit shaking_tagger.get_spots(sample)
+#         batch_matrix_spots.append(matrix_spots)
     
-    # tagging
-    # batch_shaking_tag: (batch_size, rel_id, seq_len, seq_len)
-    batch_shaking_tag = handshaking_tagger.spots2shaking_tag4batch(batch_matrix_spots)
-#     %timeit shaking_tagger.spots2shaking_tag4batch(batch_matrix_spots) #0.3s
+#     # tagging
+#     # batch_shaking_tag: (batch_size, rel_id, seq_len, seq_len)
+#     batch_shaking_tag = handshaking_tagger.spots2shaking_tag4batch(batch_matrix_spots)
+# #     %timeit shaking_tagger.spots2shaking_tag4batch(batch_matrix_spots) #0.3s
     
-    for batch_idx in range(len(batch_data)):
-        gold_sample = batch_data[batch_idx]
-        shaking_tag = batch_shaking_tag[batch_idx]
-        # decode
-        text = batch_data[batch_idx]["text"]
-        tok2char_span = get_tok2char_span_map(text)
-        rel_list = handshaking_tagger.decode_rel(text, shaking_tag, tok2char_span)
-        pred_sample = {
-            "text": text,
-            "id": gold_sample["id"],
-            "relation_list": rel_list,
-        }
+#     for batch_idx in range(len(batch_data)):
+#         gold_sample = batch_data[batch_idx]
+#         shaking_tag = batch_shaking_tag[batch_idx]
+#         # decode
+#         text = batch_data[batch_idx]["text"]
+#         tok2char_span = get_tok2char_span_map(text)
+#         rel_list = handshaking_tagger.decode_rel(text, shaking_tag, tok2char_span)
+#         pred_sample = {
+#             "text": text,
+#             "id": gold_sample["id"],
+#             "relation_list": rel_list,
+#         }
         
         
-        if not sample_equal_to(pred_sample, gold_sample) or not sample_equal_to(gold_sample, pred_sample):
-            set_trace()
+#         if not sample_equal_to(pred_sample, gold_sample) or not sample_equal_to(gold_sample, pred_sample):
+#             set_trace()
 
 
 # # Dataset
