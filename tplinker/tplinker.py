@@ -390,7 +390,8 @@ class TPLinkerBert(nn.Module):
     def __init__(self, encoder, 
                  rel_size, 
                  fake_inputs, 
-                 shaking_type
+                 shaking_type,
+                 dist_emb_size,
                 ):
         super().__init__()
         self.encoder = encoder
@@ -408,7 +409,7 @@ class TPLinkerBert(nn.Module):
             self.register_parameter("bias_4_tail_rel{}".format(ind), fc.bias)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type, dist_emb_size)
         
     def forward(self, input_ids, attention_mask, token_type_ids):
         # input_ids, attention_mask, token_type_ids: (batch_size, seq_len)
@@ -442,7 +443,8 @@ class TPLinkerBiLSTM(nn.Module):
                  rnn_dropout_rate,
                  rel_size, 
                  fake_inputs, 
-                 shaking_type):
+                 shaking_type, 
+                 dist_emb_size):
         super().__init__()
         self.word_embeds = nn.Embedding.from_pretrained(init_word_embedding_matrix, freeze = False)
         self.emb_dropout = nn.Dropout(emb_dropout_rate)
@@ -472,7 +474,7 @@ class TPLinkerBiLSTM(nn.Module):
             self.register_parameter("bias_4_tail_rel{}".format(ind), fc.bias)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type, dist_emb_size)
         
     def forward(self, input_ids):
         # input_ids: (batch_size, seq_len)

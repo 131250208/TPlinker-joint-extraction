@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import json
@@ -33,7 +33,7 @@ from glove import Glove
 import numpy as np
 
 
-# In[ ]:
+# In[2]:
 
 
 try:
@@ -43,21 +43,21 @@ except ImportError:
 config = yaml.load(open("train_config.yaml", "r"), Loader = yaml.FullLoader)
 
 
-# In[ ]:
+# In[3]:
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(config["device_num"])
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-# In[ ]:
+# In[4]:
 
 
 # hyperparameters
 hyper_parameters = config["hyper_parameters"]
 
 
-# In[ ]:
+# In[5]:
 
 
 # for reproductivity
@@ -65,7 +65,7 @@ torch.manual_seed(hyper_parameters["seed"]) # pytorch random seed
 torch.backends.cudnn.deterministic = True
 
 
-# In[ ]:
+# In[6]:
 
 
 data_home = config["data_home"]
@@ -75,7 +75,7 @@ valid_data_path = os.path.join(data_home, experiment_name, config["valid_data"])
 rel2id_path = os.path.join(data_home, experiment_name, config["rel2id"])
 
 
-# In[ ]:
+# In[7]:
 
 
 if config["logger"] == "wandb":
@@ -96,7 +96,7 @@ else:
 
 # # Load Data
 
-# In[ ]:
+# In[8]:
 
 
 train_data = json.load(open(train_data_path, "r", encoding = "utf-8"))
@@ -105,7 +105,7 @@ valid_data = json.load(open(valid_data_path, "r", encoding = "utf-8"))
 
 # # Split
 
-# In[ ]:
+# In[9]:
 
 
 # @specific
@@ -125,14 +125,14 @@ elif config["encoder"] in {"BiLSTM", }:
         return tok2char_span
 
 
-# In[ ]:
+# In[10]:
 
 
 preprocessor = Preprocessor(tokenize_func = tokenize, 
                             get_tok2char_span_map_func = get_tok2char_span_map)
 
 
-# In[ ]:
+# In[11]:
 
 
 # train and valid max token num
@@ -145,7 +145,7 @@ for sample in all_data:
 max_tok_num
 
 
-# In[ ]:
+# In[12]:
 
 
 if max_tok_num > hyper_parameters["max_seq_len"]:
@@ -161,7 +161,7 @@ if max_tok_num > hyper_parameters["max_seq_len"]:
                                                          )
 
 
-# In[ ]:
+# In[13]:
 
 
 print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
@@ -169,7 +169,7 @@ print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
 
 # # Tagger (Decoder)
 
-# In[ ]:
+# In[14]:
 
 
 max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
@@ -179,7 +179,7 @@ handshaking_tagger = HandshakingTaggingScheme(rel2id = rel2id, max_seq_len = max
 
 # # Dataset
 
-# In[ ]:
+# In[15]:
 
 
 if config["encoder"] == "BERT":
@@ -205,7 +205,7 @@ elif config["encoder"] in {"BiLSTM", }:
     data_maker = DataMaker4BiLSTM(text2indices, get_tok2char_span_map, handshaking_tagger)
 
 
-# In[ ]:
+# In[16]:
 
 
 class MyDataset(Dataset):
@@ -219,14 +219,14 @@ class MyDataset(Dataset):
         return len(self.data)
 
 
-# In[ ]:
+# In[17]:
 
 
 indexed_train_data = data_maker.get_indexed_data(train_data, max_seq_len)
 indexed_valid_data = data_maker.get_indexed_data(valid_data, max_seq_len)
 
 
-# In[ ]:
+# In[18]:
 
 
 train_dataloader = DataLoader(MyDataset(indexed_train_data), 
@@ -245,7 +245,7 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
                          )
 
 
-# In[ ]:
+# In[19]:
 
 
 # # have a look at dataloader
@@ -270,17 +270,18 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
 
 # # Model
 
-# In[ ]:
+# In[20]:
 
 
 if config["encoder"] == "BERT":
     roberta = AutoModel.from_pretrained(config["bert_path"])
     hidden_size = roberta.config.hidden_size
-    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size])
+    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size]).to(device)
     rel_extractor = TPLinkerBert(roberta, 
                                  len(rel2id), 
                                  fake_inputs,
                                  hyper_parameters["shaking_type"],
+                                 hyper_parameters["dist_emb_size"]
                                 )
     
 elif config["encoder"] in {"BiLSTM", }:
@@ -301,7 +302,7 @@ elif config["encoder"] in {"BiLSTM", }:
     print("{:.4f} tokens are in the pretrain word embedding matrix".format(count_in / len(idx2token))) # 命中预训练词向量的比例
     word_embedding_init_matrix = torch.FloatTensor(word_embedding_init_matrix)
     
-    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hyper_parameters["dec_hidden_size"]])
+    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hyper_parameters["dec_hidden_size"]]).to(device)
     rel_extractor = TPLinkerBiLSTM(word_embedding_init_matrix, 
                                    hyper_parameters["emb_dropout"], 
                                    hyper_parameters["enc_hidden_size"], 
@@ -310,6 +311,7 @@ elif config["encoder"] in {"BiLSTM", }:
                                    len(rel2id), 
                                    fake_inputs,
                                    hyper_parameters["shaking_type"],
+                                   hyper_parameters["dist_emb_size"],
                                   )
 
 rel_extractor = rel_extractor.to(device)
@@ -317,7 +319,7 @@ rel_extractor = rel_extractor.to(device)
 
 # # Metrics
 
-# In[ ]:
+# In[21]:
 
 
 def bias_loss(weights = None):
@@ -328,7 +330,7 @@ def bias_loss(weights = None):
 loss_func = bias_loss()
 
 
-# In[ ]:
+# In[22]:
 
 
 metrics = MetricsCalculator(handshaking_tagger)
@@ -336,7 +338,7 @@ metrics = MetricsCalculator(handshaking_tagger)
 
 # # Train
 
-# In[ ]:
+# In[23]:
 
 
 # train step
@@ -436,7 +438,7 @@ def valid_step(batch_valid_data):
     return ent_sample_acc.item(), head_rel_sample_acc.item(), tail_rel_sample_acc.item(), rel_cpg
 
 
-# In[ ]:
+# In[24]:
 
 
 max_f1 = 0.
@@ -559,7 +561,7 @@ def train_n_valid(train_dataloader, dev_dataloader, optimizer, scheduler, num_ep
         print("Current avf_f1: {}, Best f1: {}".format(valid_f1, max_f1))
 
 
-# In[ ]:
+# In[25]:
 
 
 # optimizer
@@ -577,7 +579,7 @@ elif hyper_parameters["scheduler"] == "Step":
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = decay_steps, gamma = decay_rate)
 
 
-# In[ ]:
+# In[26]:
 
 
 if not config["fr_scratch"]:
