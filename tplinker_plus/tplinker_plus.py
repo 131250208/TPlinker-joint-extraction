@@ -317,6 +317,7 @@ class TPLinkerPlusBert(nn.Module):
                  tag_size,
                  fake_inputs, 
                  shaking_type, 
+                 dist_emb_size,
                  tok_pair_sample_rate):
         super().__init__()
         self.encoder = encoder
@@ -327,7 +328,7 @@ class TPLinkerPlusBert(nn.Module):
         self.fc = nn.Linear(shaking_hidden_size, tag_size)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type, dist_emb_size)
         
     def forward(self, input_ids, 
                 attention_mask, 
@@ -373,6 +374,7 @@ class TPLinkerPlusBiLSTM(nn.Module):
                  tag_size,
                  fake_inputs,
                  shaking_type,
+                 dist_emb_size,
                  tok_pair_sample_rate
                 ):
         super().__init__()
@@ -396,7 +398,7 @@ class TPLinkerPlusBiLSTM(nn.Module):
         self.fc = nn.Linear(shaking_hidden_size, tag_size)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type, dist_emb_size)
         
     def forward(self, input_ids):
         # input_ids: (batch_size, seq_len)

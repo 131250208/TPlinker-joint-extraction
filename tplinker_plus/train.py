@@ -347,11 +347,12 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
 if config["encoder"] == "BERT":
     roberta = AutoModel.from_pretrained(config["bert_path"])
     hidden_size = roberta.config.hidden_size
-    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size])
+    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size]).to(device)
     rel_extractor = TPLinkerPlusBert(roberta, 
                                      tag_size,
                                      fake_inputs,
                                      hyper_parameters["shaking_type"],
+                                     hyper_parameters["dist_emb_size"],
                                      hyper_parameters["tok_pair_sample_rate"]
                                     )
     
@@ -373,7 +374,7 @@ elif config["encoder"] in {"BiLSTM", }:
     print("{:.4f} tokens are in the pretrain word embedding matrix".format(count_in / len(idx2token))) # 命中预训练词向量的比例
     word_embedding_init_matrix = torch.FloatTensor(word_embedding_init_matrix)
     
-    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hyper_parameters["dec_hidden_size"]])
+    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hyper_parameters["dec_hidden_size"]]).to(device)
     rel_extractor = TPLinkerPlusBiLSTM(word_embedding_init_matrix, 
                                        hyper_parameters["emb_dropout"], 
                                        hyper_parameters["enc_hidden_size"], 
@@ -382,6 +383,7 @@ elif config["encoder"] in {"BiLSTM", }:
                                        tag_size, 
                                        fake_inputs,
                                        hyper_parameters["shaking_type"],
+                                       hyper_parameters["dist_emb_size"],
                                        hyper_parameters["tok_pair_sample_rate"],
                                       )
 
@@ -655,6 +657,7 @@ if not config["fr_scratch"]:
     model_state_path = config["model_state_dict_path"]
     rel_extractor.load_state_dict(torch.load(model_state_path))
     print("------------model state {} loaded ----------------".format(model_state_path.split("/")[-1]))
+
 
 train_n_valid(train_dataloader, valid_dataloader, optimizer, scheduler, hyper_parameters["epochs"])
 

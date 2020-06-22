@@ -2,6 +2,7 @@ from IPython.core.debugger import set_trace
 import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
+import math
 
 class LayerNorm(nn.Module):
     def __init__(self, shape, cond_dim=0, center=True, scale=True, epsilon=None, conditional=False,
@@ -90,7 +91,7 @@ class LayerNorm(nn.Module):
         return outputs
     
 class HandshakingKernel(nn.Module):
-    def __init__(self, fake_inputs, shaking_type):
+    def __init__(self, fake_inputs, shaking_type, distance_emb_size = -1):
         super().__init__()
         hidden_size = fake_inputs.size()[-1]
         self.cond_layer_norm = LayerNorm(fake_inputs.size(), fake_inputs.size()[-1], conditional = True)
@@ -100,6 +101,16 @@ class HandshakingKernel(nn.Module):
         elif shaking_type == "res_gate":
             self.Wg = nn.Linear(hidden_size, hidden_size)
             self.Wo = nn.Linear(hidden_size * 3, hidden_size)
+        # init distance_embbeding matrix
+        self.distance_emb_size = distance_emb_size
+        if distance_emb_size != -1:
+            self.dist_emb = torch.zeros([distance_emb_size, hidden_size]).to(fake_inputs.device)
+            for d in range(distance_emb_size):
+                for i in range(hidden_size):
+                    if i % 2 == 0:
+                        self.dist_emb[d][i] = math.sin(d / 10000**(i / hidden_size))
+                    else:
+                        self.dist_emb[d][i] = math.cos(d / 10000**((i - 1) / hidden_size))
             
     def forward(self, seq_hiddens):
         '''
@@ -123,7 +134,14 @@ class HandshakingKernel(nn.Module):
                 gate = torch.sigmoid(self.Wg(repeat_hiddens))
                 cond_hiddens = after_hiddens * gate
                 res_hiddens = torch.cat([repeat_hiddens, after_hiddens, cond_hiddens], dim = -1)
-                shaking_hiddens = torch.tanh(self.Wo(res_hiddens))   
+                shaking_hiddens = torch.tanh(self.Wo(res_hiddens))
+                
+            # distance embedding
+            if self.distance_emb_size != -1:
+                dist_embbedings = self.dist_emb[:seq_len - ind, :][None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+#                 set_trace()
+                shaking_hiddens = shaking_hiddens + dist_embbedings
+            
             shaking_hiddens_list.append(shaking_hiddens)
         long_shaking_hiddens = torch.cat(shaking_hiddens_list, dim = 1)
         return long_shaking_hiddens
