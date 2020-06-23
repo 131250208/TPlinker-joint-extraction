@@ -5,6 +5,7 @@ wandb/
 *.yaml
 *.pt
 *.emb
+CasRel/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
