@@ -7,6 +7,7 @@ import torch.nn as nn
 import json
 from torch.nn.parameter import Parameter
 from common.components import HandshakingKernel
+import math
 
 class HandshakingTaggingScheme(object):
     """docstring for HandshakingTaggingScheme"""
@@ -392,14 +393,16 @@ class TPLinkerBert(nn.Module):
                  fake_inputs, 
                  shaking_type,
                  dist_emb_size,
+                 ent_add_dist,
+                 rel_add_dist
                 ):
         super().__init__()
         self.encoder = encoder
-        shaking_hidden_size = encoder.config.hidden_size
+        hidden_size = encoder.config.hidden_size
         
-        self.ent_fc = nn.Linear(shaking_hidden_size, 2)
-        self.head_rel_fc_list = [nn.Linear(shaking_hidden_size, 3) for _ in range(rel_size)]
-        self.tail_rel_fc_list = [nn.Linear(shaking_hidden_size, 3) for _ in range(rel_size)]
+        self.ent_fc = nn.Linear(hidden_size, 2)
+        self.head_rel_fc_list = [nn.Linear(hidden_size, 3) for _ in range(rel_size)]
+        self.tail_rel_fc_list = [nn.Linear(hidden_size, 3) for _ in range(rel_size)]
         
         for ind, fc in enumerate(self.head_rel_fc_list):
             self.register_parameter("weight_4_head_rel{}".format(ind), fc.weight)
@@ -409,7 +412,25 @@ class TPLinkerBert(nn.Module):
             self.register_parameter("bias_4_tail_rel{}".format(ind), fc.bias)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type, dist_emb_size)
+        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        
+        # distance embedding
+        self.dist_emb_size = dist_emb_size
+        if dist_emb_size != -1:
+            dist_emb = torch.zeros([dist_emb_size, hidden_size]).to(fake_inputs.device)
+            for d in range(dist_emb_size):
+                for i in range(hidden_size):
+                    if i % 2 == 0:
+                        dist_emb[d][i] = math.sin(d / 10000**(i / hidden_size))
+                    else:
+                        dist_emb[d][i] = math.cos(d / 10000**((i - 1) / hidden_size))
+            seq_len = fake_inputs.size()[1]
+            dist_embbeding_segs = []
+            for after_num in range(seq_len, 0, -1):
+                dist_embbeding_segs.append(dist_emb[:after_num, :])
+            self.dist_embbedings = torch.cat(dist_embbeding_segs, dim = 0)
+        self.ent_add_dist = ent_add_dist
+        self.rel_add_dist = rel_add_dist
         
     def forward(self, input_ids, attention_mask, token_type_ids):
         # input_ids, attention_mask, token_type_ids: (batch_size, seq_len)
@@ -419,16 +440,24 @@ class TPLinkerBert(nn.Module):
         
         # shaking_hiddens: (batch_size, 1 + ... + seq_len, hidden_size)
         shaking_hiddens = self.handshaking_kernel(last_hidden_state)
-         
-        ent_shaking_outputs = self.ent_fc(shaking_hiddens)
+        if self.dist_emb_size != -1 and self.ent_add_dist:
+            shaking_hiddens4ent = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+        else:
+            shaking_hiddens4ent = shaking_hiddens
+        if self.dist_emb_size != -1 and self.rel_add_dist:
+            shaking_hiddens4rel = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+        else:
+            shaking_hiddens4rel = shaking_hiddens
+            
+        ent_shaking_outputs = self.ent_fc(shaking_hiddens4ent)
             
         head_rel_shaking_outputs_list = []
         for fc in self.head_rel_fc_list:
-            head_rel_shaking_outputs_list.append(fc(shaking_hiddens))
+            head_rel_shaking_outputs_list.append(fc(shaking_hiddens4rel))
             
         tail_rel_shaking_outputs_list = []
         for fc in self.tail_rel_fc_list:
-            tail_rel_shaking_outputs_list.append(fc(shaking_hiddens))
+            tail_rel_shaking_outputs_list.append(fc(shaking_hiddens4rel))
         
         head_rel_shaking_outputs = torch.stack(head_rel_shaking_outputs_list, dim = 1)
         tail_rel_shaking_outputs = torch.stack(tail_rel_shaking_outputs_list, dim = 1)
@@ -444,7 +473,9 @@ class TPLinkerBiLSTM(nn.Module):
                  rel_size, 
                  fake_inputs, 
                  shaking_type, 
-                 dist_emb_size):
+                 dist_emb_size, 
+                 ent_add_dist, 
+                 rel_add_dist):
         super().__init__()
         self.word_embeds = nn.Embedding.from_pretrained(init_word_embedding_matrix, freeze = False)
         self.emb_dropout = nn.Dropout(emb_dropout_rate)
@@ -460,11 +491,11 @@ class TPLinkerBiLSTM(nn.Module):
                         batch_first = True)
         self.rnn_dropout = nn.Dropout(rnn_dropout_rate)
         
-        shaking_hidden_size = dec_hidden_size
+        hidden_size = dec_hidden_size
            
-        self.ent_fc = nn.Linear(shaking_hidden_size, 2)
-        self.head_rel_fc_list = [nn.Linear(shaking_hidden_size, 3) for _ in range(rel_size)]
-        self.tail_rel_fc_list = [nn.Linear(shaking_hidden_size, 3) for _ in range(rel_size)]
+        self.ent_fc = nn.Linear(hidden_size, 2)
+        self.head_rel_fc_list = [nn.Linear(hidden_size, 3) for _ in range(rel_size)]
+        self.tail_rel_fc_list = [nn.Linear(hidden_size, 3) for _ in range(rel_size)]
         
         for ind, fc in enumerate(self.head_rel_fc_list):
             self.register_parameter("weight_4_head_rel{}".format(ind), fc.weight)
@@ -474,7 +505,26 @@ class TPLinkerBiLSTM(nn.Module):
             self.register_parameter("bias_4_tail_rel{}".format(ind), fc.bias)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type, dist_emb_size)
+        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        
+        # distance embedding
+        self.dist_emb_size = dist_emb_size
+        if dist_emb_size != -1:
+            dist_emb = torch.zeros([dist_emb_size, hidden_size]).to(fake_inputs.device)
+            for d in range(dist_emb_size):
+                for i in range(hidden_size):
+                    if i % 2 == 0:
+                        dist_emb[d][i] = math.sin(d / 10000**(i / hidden_size))
+                    else:
+                        dist_emb[d][i] = math.cos(d / 10000**((i - 1) / hidden_size))
+            seq_len = fake_inputs.size()[1]
+            dist_embbeding_segs = []
+            for after_num in range(seq_len, 0, -1):
+                dist_embbeding_segs.append(dist_emb[:after_num, :])
+            self.dist_embbedings = torch.cat(dist_embbeding_segs, dim = 0)
+        
+        self.ent_add_dist = ent_add_dist
+        self.rel_add_dist = rel_add_dist
         
     def forward(self, input_ids):
         # input_ids: (batch_size, seq_len)
@@ -490,16 +540,25 @@ class TPLinkerBiLSTM(nn.Module):
         
         # shaking_hiddens: (batch_size, 1 + ... + seq_len, hidden_size)
         shaking_hiddens = self.handshaking_kernel(lstm_outputs)
-           
-        ent_shaking_outputs = self.ent_fc(shaking_hiddens)
+
+        if self.dist_emb_size != -1 and self.ent_add_dist:
+            shaking_hiddens4ent = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+        else:
+            shaking_hiddens4ent = shaking_hiddens
+        if self.dist_emb_size != -1 and self.rel_add_dist:
+            shaking_hiddens4rel = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+        else:
+            shaking_hiddens4rel = shaking_hiddens
             
+        ent_shaking_outputs = self.ent_fc(shaking_hiddens4ent)
+        
         head_rel_shaking_outputs_list = []
         for fc in self.head_rel_fc_list:
-            head_rel_shaking_outputs_list.append(fc(shaking_hiddens))
+            head_rel_shaking_outputs_list.append(fc(shaking_hiddens4rel))
             
         tail_rel_shaking_outputs_list = []
         for fc in self.tail_rel_fc_list:
-            tail_rel_shaking_outputs_list.append(fc(shaking_hiddens))
+            tail_rel_shaking_outputs_list.append(fc(shaking_hiddens4rel))
         
         head_rel_shaking_outputs = torch.stack(head_rel_shaking_outputs_list, dim = 1)
         tail_rel_shaking_outputs = torch.stack(tail_rel_shaking_outputs_list, dim = 1)

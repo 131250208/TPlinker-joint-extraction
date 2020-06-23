@@ -91,7 +91,7 @@ class LayerNorm(nn.Module):
         return outputs
     
 class HandshakingKernel(nn.Module):
-    def __init__(self, fake_inputs, shaking_type, distance_emb_size = -1):
+    def __init__(self, fake_inputs, shaking_type):
         super().__init__()
         hidden_size = fake_inputs.size()[-1]
         self.cond_layer_norm = LayerNorm(fake_inputs.size(), fake_inputs.size()[-1], conditional = True)
@@ -101,18 +101,8 @@ class HandshakingKernel(nn.Module):
         elif shaking_type == "res_gate":
             self.Wg = nn.Linear(hidden_size, hidden_size)
             self.Wo = nn.Linear(hidden_size * 3, hidden_size)
-        # init distance_embbeding matrix
-        self.distance_emb_size = distance_emb_size
-        if distance_emb_size != -1:
-            self.dist_emb = torch.zeros([distance_emb_size, hidden_size]).to(fake_inputs.device)
-            for d in range(distance_emb_size):
-                for i in range(hidden_size):
-                    if i % 2 == 0:
-                        self.dist_emb[d][i] = math.sin(d / 10000**(i / hidden_size))
-                    else:
-                        self.dist_emb[d][i] = math.cos(d / 10000**((i - 1) / hidden_size))
-            
-    def forward(self, seq_hiddens):
+     
+    def forward(self, seq_hiddens, add_dist_emb = True):
         '''
         seq_hiddens: (batch_size, seq_len, hidden_size)
         return:
@@ -135,12 +125,6 @@ class HandshakingKernel(nn.Module):
                 cond_hiddens = after_hiddens * gate
                 res_hiddens = torch.cat([repeat_hiddens, after_hiddens, cond_hiddens], dim = -1)
                 shaking_hiddens = torch.tanh(self.Wo(res_hiddens))
-                
-            # distance embedding
-            if self.distance_emb_size != -1:
-                dist_embbedings = self.dist_emb[:seq_len - ind, :][None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
-#                 set_trace()
-                shaking_hiddens = shaking_hiddens + dist_embbedings
             
             shaking_hiddens_list.append(shaking_hiddens)
         long_shaking_hiddens = torch.cat(shaking_hiddens_list, dim = 1)
