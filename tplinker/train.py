@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import json
@@ -33,7 +33,7 @@ from glove import Glove
 import numpy as np
 
 
-# In[2]:
+# In[ ]:
 
 
 try:
@@ -43,21 +43,21 @@ except ImportError:
 config = yaml.load(open("train_config.yaml", "r"), Loader = yaml.FullLoader)
 
 
-# In[3]:
+# In[ ]:
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(config["device_num"])
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-# In[4]:
+# In[ ]:
 
 
 # hyperparameters
 hyper_parameters = config["hyper_parameters"]
 
 
-# In[5]:
+# In[ ]:
 
 
 # for reproductivity
@@ -65,7 +65,7 @@ torch.manual_seed(hyper_parameters["seed"]) # pytorch random seed
 torch.backends.cudnn.deterministic = True
 
 
-# In[6]:
+# In[ ]:
 
 
 data_home = config["data_home"]
@@ -75,7 +75,7 @@ valid_data_path = os.path.join(data_home, experiment_name, config["valid_data"])
 rel2id_path = os.path.join(data_home, experiment_name, config["rel2id"])
 
 
-# In[7]:
+# In[ ]:
 
 
 if config["logger"] == "wandb":
@@ -96,7 +96,7 @@ else:
 
 # # Load Data
 
-# In[8]:
+# In[ ]:
 
 
 train_data = json.load(open(train_data_path, "r", encoding = "utf-8"))
@@ -105,7 +105,7 @@ valid_data = json.load(open(valid_data_path, "r", encoding = "utf-8"))
 
 # # Split
 
-# In[9]:
+# In[ ]:
 
 
 # @specific
@@ -125,14 +125,14 @@ elif config["encoder"] in {"BiLSTM", }:
         return tok2char_span
 
 
-# In[10]:
+# In[ ]:
 
 
 preprocessor = Preprocessor(tokenize_func = tokenize, 
                             get_tok2char_span_map_func = get_tok2char_span_map)
 
 
-# In[11]:
+# In[ ]:
 
 
 # train and valid max token num
@@ -145,7 +145,7 @@ for sample in all_data:
 max_tok_num
 
 
-# In[12]:
+# In[ ]:
 
 
 if max_tok_num > hyper_parameters["max_seq_len"]:
@@ -161,7 +161,7 @@ if max_tok_num > hyper_parameters["max_seq_len"]:
                                                          )
 
 
-# In[13]:
+# In[ ]:
 
 
 print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
@@ -169,7 +169,7 @@ print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
 
 # # Tagger (Decoder)
 
-# In[14]:
+# In[ ]:
 
 
 max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
@@ -179,7 +179,7 @@ handshaking_tagger = HandshakingTaggingScheme(rel2id = rel2id, max_seq_len = max
 
 # # Dataset
 
-# In[15]:
+# In[ ]:
 
 
 if config["encoder"] == "BERT":
@@ -205,7 +205,7 @@ elif config["encoder"] in {"BiLSTM", }:
     data_maker = DataMaker4BiLSTM(text2indices, get_tok2char_span_map, handshaking_tagger)
 
 
-# In[16]:
+# In[ ]:
 
 
 class MyDataset(Dataset):
@@ -219,14 +219,14 @@ class MyDataset(Dataset):
         return len(self.data)
 
 
-# In[17]:
+# In[ ]:
 
 
 indexed_train_data = data_maker.get_indexed_data(train_data, max_seq_len)
 indexed_valid_data = data_maker.get_indexed_data(valid_data, max_seq_len)
 
 
-# In[18]:
+# In[ ]:
 
 
 train_dataloader = DataLoader(MyDataset(indexed_train_data), 
@@ -245,7 +245,7 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
                          )
 
 
-# In[19]:
+# In[ ]:
 
 
 # # have a look at dataloader
@@ -270,7 +270,7 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
 
 # # Model
 
-# In[20]:
+# In[ ]:
 
 
 if config["encoder"] == "BERT":
@@ -281,7 +281,9 @@ if config["encoder"] == "BERT":
                                  len(rel2id), 
                                  fake_inputs,
                                  hyper_parameters["shaking_type"],
-                                 hyper_parameters["dist_emb_size"]
+                                 hyper_parameters["dist_emb_size"],
+                                 hyper_parameters["ent_add_dist"],
+                                 hyper_parameters["rel_add_dist"],
                                 )
     
 elif config["encoder"] in {"BiLSTM", }:
@@ -312,14 +314,22 @@ elif config["encoder"] in {"BiLSTM", }:
                                    fake_inputs,
                                    hyper_parameters["shaking_type"],
                                    hyper_parameters["dist_emb_size"],
+                                   hyper_parameters["ent_add_dist"],
+                                   hyper_parameters["rel_add_dist"],
                                   )
 
 rel_extractor = rel_extractor.to(device)
 
 
+# In[ ]:
+
+
+# sum(x.numel() for x in rel_extractor.parameters())
+
+
 # # Metrics
 
-# In[21]:
+# In[ ]:
 
 
 def bias_loss(weights = None):
@@ -330,7 +340,7 @@ def bias_loss(weights = None):
 loss_func = bias_loss()
 
 
-# In[22]:
+# In[ ]:
 
 
 metrics = MetricsCalculator(handshaking_tagger)
@@ -338,7 +348,7 @@ metrics = MetricsCalculator(handshaking_tagger)
 
 # # Train
 
-# In[23]:
+# In[ ]:
 
 
 # train step
@@ -438,7 +448,7 @@ def valid_step(batch_valid_data):
     return ent_sample_acc.item(), head_rel_sample_acc.item(), tail_rel_sample_acc.item(), rel_cpg
 
 
-# In[24]:
+# In[ ]:
 
 
 max_f1 = 0.
@@ -561,7 +571,7 @@ def train_n_valid(train_dataloader, dev_dataloader, optimizer, scheduler, num_ep
         print("Current avf_f1: {}, Best f1: {}".format(valid_f1, max_f1))
 
 
-# In[25]:
+# In[ ]:
 
 
 # optimizer
@@ -579,7 +589,7 @@ elif hyper_parameters["scheduler"] == "Step":
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size = decay_steps, gamma = decay_rate)
 
 
-# In[26]:
+# In[ ]:
 
 
 if not config["fr_scratch"]:
