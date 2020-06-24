@@ -586,8 +586,8 @@ class MetricsCalculator():
         # seq维上所有tag必须正确，所以correct_tag_num必须等于seq的长度才算一个correct的sample
         sample_acc_ = torch.eq(correct_tag_num, torch.ones_like(correct_tag_num) * truth.size()[-1]).float()
         sample_acc = torch.mean(sample_acc_)
-
-        return sample_acc 
+        return sample_acc
+    
     def get_rel_cpg(self, sample_list, tok2char_span_list, 
                  batch_pred_ent_shaking_outputs,
                  batch_pred_head_rel_shaking_outputs,
