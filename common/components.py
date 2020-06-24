@@ -102,7 +102,7 @@ class HandshakingKernel(nn.Module):
             self.Wg = nn.Linear(hidden_size, hidden_size)
             self.Wo = nn.Linear(hidden_size * 3, hidden_size)
      
-    def forward(self, seq_hiddens, add_dist_emb = True):
+    def forward(self, seq_hiddens):
         '''
         seq_hiddens: (batch_size, seq_len, hidden_size)
         return:
