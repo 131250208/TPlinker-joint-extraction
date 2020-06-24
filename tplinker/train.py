@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import json
@@ -28,36 +28,36 @@ from tplinker import (HandshakingTaggingScheme,
                       TPLinkerBiLSTM,
                       MetricsCalculator)
 import wandb
-import yaml
+import config
 from glove import Glove
 import numpy as np
 
 
-# In[ ]:
+# In[2]:
 
 
-try:
-    from yaml import CLoader as Loader, CDumper as Dumper
-except ImportError:
-    from yaml import Loader, Dumper
-config = yaml.load(open("train_config.yaml", "r"), Loader = yaml.FullLoader)
+# try:
+#     from yaml import CLoader as Loader, CDumper as Dumper
+# except ImportError:
+#     from yaml import Loader, Dumper
+# config = yaml.load(open("train_config.yaml", "r"), Loader = yaml.FullLoader)
 
 
-# In[ ]:
+# In[3]:
+
+
+config = config.train_config
+hyper_parameters = config["hyper_parameters"]
+
+
+# In[4]:
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(config["device_num"])
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-# In[ ]:
-
-
-# hyperparameters
-hyper_parameters = config["hyper_parameters"]
-
-
-# In[ ]:
+# In[5]:
 
 
 # for reproductivity
@@ -65,7 +65,7 @@ torch.manual_seed(hyper_parameters["seed"]) # pytorch random seed
 torch.backends.cudnn.deterministic = True
 
 
-# In[ ]:
+# In[6]:
 
 
 data_home = config["data_home"]
@@ -75,7 +75,7 @@ valid_data_path = os.path.join(data_home, experiment_name, config["valid_data"])
 rel2id_path = os.path.join(data_home, experiment_name, config["rel2id"])
 
 
-# In[ ]:
+# In[7]:
 
 
 if config["logger"] == "wandb":
@@ -96,7 +96,7 @@ else:
 
 # # Load Data
 
-# In[ ]:
+# In[8]:
 
 
 train_data = json.load(open(train_data_path, "r", encoding = "utf-8"))
@@ -105,7 +105,7 @@ valid_data = json.load(open(valid_data_path, "r", encoding = "utf-8"))
 
 # # Split
 
-# In[ ]:
+# In[9]:
 
 
 # @specific
@@ -125,14 +125,14 @@ elif config["encoder"] in {"BiLSTM", }:
         return tok2char_span
 
 
-# In[ ]:
+# In[10]:
 
 
 preprocessor = Preprocessor(tokenize_func = tokenize, 
                             get_tok2char_span_map_func = get_tok2char_span_map)
 
 
-# In[ ]:
+# In[11]:
 
 
 # train and valid max token num
@@ -145,7 +145,7 @@ for sample in all_data:
 max_tok_num
 
 
-# In[ ]:
+# In[12]:
 
 
 if max_tok_num > hyper_parameters["max_seq_len"]:
@@ -161,7 +161,7 @@ if max_tok_num > hyper_parameters["max_seq_len"]:
                                                          )
 
 
-# In[ ]:
+# In[13]:
 
 
 print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
@@ -169,7 +169,7 @@ print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
 
 # # Tagger (Decoder)
 
-# In[ ]:
+# In[14]:
 
 
 max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
@@ -179,7 +179,7 @@ handshaking_tagger = HandshakingTaggingScheme(rel2id = rel2id, max_seq_len = max
 
 # # Dataset
 
-# In[ ]:
+# In[15]:
 
 
 if config["encoder"] == "BERT":
@@ -205,7 +205,7 @@ elif config["encoder"] in {"BiLSTM", }:
     data_maker = DataMaker4BiLSTM(text2indices, get_tok2char_span_map, handshaking_tagger)
 
 
-# In[ ]:
+# In[16]:
 
 
 class MyDataset(Dataset):
@@ -443,6 +443,7 @@ def valid_step(batch_valid_data):
                                     ent_shaking_outputs,
                                     head_rel_shaking_outputs,
                                     tail_rel_shaking_outputs,
+                                    hyper_parameters["match_pattern"]
                                     )
     
     return ent_sample_acc.item(), head_rel_sample_acc.item(), tail_rel_sample_acc.item(), rel_cpg
