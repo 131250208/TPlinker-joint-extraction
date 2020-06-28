@@ -6,6 +6,7 @@ wandb/
 *.pt
 *.emb
 CasRel/
+*config*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

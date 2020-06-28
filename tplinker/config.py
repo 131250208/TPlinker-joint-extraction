@@ -1,15 +1,15 @@
 common = {
-    "exp_name": "nyt_single",
+    "exp_name": "webnlg",
     "rel2id": "rel2id.json",
-    "device_num": 0,
-#     "encoder": "BiLSTM",
-    "encoder": "BERT", 
+    "device_num": 2,
+    "encoder": "BiLSTM",
+#     "encoder": "BERT", 
     "hyper_parameters": {
         "shaking_type": "cat",
         "dist_emb_size": -1,
         "ent_add_dist": True,
         "rel_add_dist": True,
-        "match_pattern": "only_head_text", # only_head_text, whole_text, only_head_index, whole_span
+        "match_pattern": "whole_text", # only_head_text, whole_text, only_head_index, whole_span
     },
 }
 common["run_name"] = "{}+{}+{}".format("TP1", common["hyper_parameters"]["shaking_type"], common["encoder"])
@@ -20,7 +20,8 @@ train_config = {
     "rel2id": "rel2id.json",
     
     # for default logger
-    "logger": "default", # "wandb"
+    "logger": "wandb",
+#     "logger": "default", 
     "log_path": "./default.log",
     "path_to_save_model": "./model_state",
 
@@ -46,7 +47,7 @@ train_config = {
 
 eval_config = {
     "model_state_dict_dir": "./wandb",
-    "run_ids": ["2p1gy9aq", ],
+    "run_ids": ["46qer3r9", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     
@@ -75,7 +76,7 @@ bert_config = {
 bilstm_config = {
     "data_home": "../data4bilstm",
     "token2idx": "token2idx.json",
-    "pretrain_configed_word_embedding_path": "../pretrain_configed_word_emb/glove_300_webnlg.emb",
+    "pretrained_word_embedding_path": "../pretrained_word_emb/glove_300_nyt.emb",
     "hyper_parameters": {
          "lr": 1e-3,
          "enc_hidden_size": 300,
