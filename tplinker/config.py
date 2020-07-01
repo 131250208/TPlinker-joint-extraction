@@ -34,20 +34,20 @@ train_config = {
     # if not fr scratch, set a model_state_dict
     "model_state_dict_path": "",
     "hyper_parameters": {
-        "batch_size": 24,
+        "batch_size": 6,
         "epochs": 200,
         "seed": 2333,
         "log_interval": 10,
         "max_seq_len": 100,
         "sliding_len": 20,
-        "loss_weight_recover_steps": 10000,
+        "loss_weight_recover_steps": 6000,
         "scheduler": "CAWR", # Step
     },
 }
 
 eval_config = {
     "model_state_dict_dir": "./wandb",
-    "run_ids": ["46qer3r9", ],
+    "run_ids": ["1vgzwath", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     
@@ -59,7 +59,7 @@ eval_config = {
     "score": True,
     
     "hyper_parameters": {
-        "batch_size": 32,
+        "batch_size": 1,
         "force_split": False,
         "max_test_seq_len": 512,
         "sliding_len": 50,
