@@ -1,14 +1,14 @@
 common = {
     "exp_name": "nyt_single",
     "rel2id": "rel2id.json",
-    "device_num": 0,
+    "device_num": 1,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
         "shaking_type": "cat",
         "dist_emb_size": -1,
-        "ent_add_dist": True,
-        "rel_add_dist": True,
+        "ent_add_dist": False,
+        "rel_add_dist": False,
         "match_pattern": "only_head_text", # only_head_text, whole_text, only_head_index, whole_span
     },
 }
@@ -20,7 +20,8 @@ train_config = {
     "rel2id": "rel2id.json",
     
     # for default logger
-    "logger": "default", # "wandb"
+    "logger": "wandb",
+#     "logger": "default", 
     "log_path": "./default.log",
     "path_to_save_model": "./model_state",
 
@@ -33,20 +34,20 @@ train_config = {
     # if not fr scratch, set a model_state_dict
     "model_state_dict_path": "",
     "hyper_parameters": {
-        "batch_size": 24,
+        "batch_size": 6,
         "epochs": 200,
         "seed": 2333,
         "log_interval": 10,
         "max_seq_len": 100,
         "sliding_len": 20,
-        "loss_weight_recover_steps": 10000,
+        "loss_weight_recover_steps": 6000,
         "scheduler": "CAWR", # Step
     },
 }
 
 eval_config = {
     "model_state_dict_dir": "./wandb",
-    "run_ids": ["2p1gy9aq", ],
+    "run_ids": ["1vgzwath", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     
@@ -58,7 +59,7 @@ eval_config = {
     "score": True,
     
     "hyper_parameters": {
-        "batch_size": 32,
+        "batch_size": 1,
         "force_split": False,
         "max_test_seq_len": 512,
         "sliding_len": 50,
@@ -75,7 +76,7 @@ bert_config = {
 bilstm_config = {
     "data_home": "../data4bilstm",
     "token2idx": "token2idx.json",
-    "pretrain_configed_word_embedding_path": "../pretrain_configed_word_emb/glove_300_webnlg.emb",
+    "pretrained_word_embedding_path": "../pretrained_word_emb/glove_300_webnlg.emb",
     "hyper_parameters": {
          "lr": 1e-3,
          "enc_hidden_size": 300,
