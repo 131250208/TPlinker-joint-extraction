@@ -1,5 +1,5 @@
 common = {
-    "exp_name": "webnlg",
+    "exp_name": "nyt_single",
     "rel2id": "rel2id.json",
     "device_num": 1,
 #     "encoder": "BiLSTM",
