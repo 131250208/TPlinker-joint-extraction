@@ -1,4 +1,17 @@
 # TPLinker
+## Requirements
+This repo was tested on Python 3.6 and Pytorch 1.4. The main requirements are:
+```
+tqdm
+glove-python-binary==0.2.0
+transformers==2.10.0
+wandb
+yaml
+```
+In the root directory, run
+```
+pip install -e .
+```
 ## Data
 ### download data
 Get and preprocess NYT* and WebNLG* following [CasRel](https://github.com/weizhepei/CasRel/tree/master/data) (note: named NYT and WebNLG by CasRel).
