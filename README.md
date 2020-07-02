@@ -22,7 +22,13 @@ Set configuration in `tplinker/config.py` as follows:
 ```
 common["exp_name"] = nyt_star # webnlg_star, nyt, webnlg
 common["device_num"] = 0 # 1, 2, 3 ...
-train_config["hyper_parameters"]["batch_size"] = 24 # 6 for webnlg and webnlg*
+common["encoder"] = "BERT" # BiLSTM
+train_config["hyper_parameters"]["batch_size"] = 24 # 6 for webnlg and webnlg_star
+train_config["hyper_parameters"]["match_pattern"] = "only_head_text" # "only_head_text" for webnlg_star and nyt_star; "whole_text" for webnlg and nyt.
+
+# if the encoder is set to BiLSTM
+bilstm_config["pretrained_word_embedding_path"] = ""../pretrained_word_emb/glove_300_nyt.emb""
+
 # Leave the rest as default
 ```
 
