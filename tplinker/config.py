@@ -1,7 +1,10 @@
+import string
+import random
+
 common = {
-    "exp_name": "nyt_single",
+    "exp_name": "nyt_star",
     "rel2id": "rel2id.json",
-    "device_num": 1,
+    "device_num": 3,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
@@ -14,16 +17,16 @@ common = {
 }
 common["run_name"] = "{}+{}+{}".format("TP1", common["hyper_parameters"]["shaking_type"], common["encoder"])
 
+run_id = ''.join(random.sample(string.ascii_letters + string.digits, 8))
 train_config = {
     "train_data": "train_data.json",
     "valid_data": "valid_data.json",
     "rel2id": "rel2id.json",
-    
-    # for default logger
-    "logger": "wandb",
-#     "logger": "default", 
-    "log_path": "./default.log",
-    "path_to_save_model": "./model_state",
+    "run_id": run_id,
+#     "logger": "wandb",
+    "logger": "default", 
+    "log_path": "./default_log_dir/{}/default.log".format(run_id),
+    "path_to_save_model": "./default_log_dir/{}".format(run_id),
 
     # when to save the model state dict
     "f1_2_save": 0,
@@ -34,20 +37,20 @@ train_config = {
     # if not fr scratch, set a model_state_dict
     "model_state_dict_path": "",
     "hyper_parameters": {
-        "batch_size": 6,
-        "epochs": 200,
+        "batch_size": 24,
+        "epochs": 100,
         "seed": 2333,
         "log_interval": 10,
         "max_seq_len": 100,
         "sliding_len": 20,
-        "loss_weight_recover_steps": 6000,
+        "loss_weight_recover_steps": 10000,
         "scheduler": "CAWR", # Step
     },
 }
 
 eval_config = {
-    "model_state_dict_dir": "./wandb",
-    "run_ids": ["1vgzwath", ],
+    "model_state_dict_dir": "./default_log_dir", # "./wandb"
+    "run_ids": ["DGKhEFlH", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     
@@ -59,7 +62,7 @@ eval_config = {
     "score": True,
     
     "hyper_parameters": {
-        "batch_size": 1,
+        "batch_size": 32,
         "force_split": False,
         "max_test_seq_len": 512,
         "sliding_len": 50,
@@ -76,7 +79,7 @@ bert_config = {
 bilstm_config = {
     "data_home": "../data4bilstm",
     "token2idx": "token2idx.json",
-    "pretrained_word_embedding_path": "../pretrained_word_emb/glove_300_webnlg.emb",
+    "pretrained_word_embedding_path": "../pretrained_word_emb/glove_300_nyt.emb",
     "hyper_parameters": {
          "lr": 1e-3,
          "enc_hidden_size": 300,

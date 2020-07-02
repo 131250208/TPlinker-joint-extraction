@@ -94,13 +94,14 @@ class HandshakingKernel(nn.Module):
     def __init__(self, fake_inputs, shaking_type):
         super().__init__()
         hidden_size = fake_inputs.size()[-1]
-        self.cond_layer_norm = LayerNorm(fake_inputs.size(), fake_inputs.size()[-1], conditional = True)
         self.shaking_type = shaking_type
         if shaking_type == "cat":
             self.combine_fc = nn.Linear(hidden_size * 2, hidden_size)
         elif shaking_type == "res_gate":
             self.Wg = nn.Linear(hidden_size, hidden_size)
             self.Wo = nn.Linear(hidden_size * 3, hidden_size)
+        elif shaking_type == "cln":
+            self.cond_layer_norm = LayerNorm(fake_inputs.size(), fake_inputs.size()[-1], conditional = True)
      
     def forward(self, seq_hiddens):
         '''

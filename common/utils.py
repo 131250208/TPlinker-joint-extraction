@@ -3,12 +3,16 @@ from tqdm import tqdm
 from IPython.core.debugger import set_trace
 import copy
 import json
+import os
 
 class DefaultLogger:
-    def __init__(self, log_path, project, run_name, hyperparameter):
+    def __init__(self, log_path, project, run_name, run_id, hyperparameter):
         self.log_path = log_path
-        
-        self.log("project: {}, run_name: {}\n".format(project, run_name))
+        log_dir = "/".join(self.log_path.split("/")[:-1])
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+            
+        self.log("project: {}, run_name: {}, run_id: {}\n".format(project, run_name, run_id))
         hyperparameters_format = "--------------hypter_parameters------------------- \n{}\n-----------------------------------------"
         self.log(hyperparameters_format.format(json.dumps(hyperparameter, indent = 4)))
 
@@ -39,7 +43,7 @@ class Preprocessor:
                 text = sample["text"]
                 rel_list = sample["triple_list"]
                 subj_key, pred_key, obj_key = 0, 1, 2
-            elif ori_format == "joint_re":
+            elif ori_format == "etl_span":
                 text = " ".join(sample["tokens"])
                 rel_list = sample["spo_list"]
                 subj_key, pred_key, obj_key = 0, 1, 2

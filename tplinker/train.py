@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import json
@@ -31,9 +31,10 @@ import wandb
 import config
 from glove import Glove
 import numpy as np
+from torchsummary import summary
 
 
-# In[2]:
+# In[ ]:
 
 
 # try:
@@ -43,21 +44,21 @@ import numpy as np
 # config = yaml.load(open("train_config.yaml", "r"), Loader = yaml.FullLoader)
 
 
-# In[3]:
+# In[ ]:
 
 
 config = config.train_config
 hyper_parameters = config["hyper_parameters"]
 
 
-# In[4]:
+# In[ ]:
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(config["device_num"])
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-# In[5]:
+# In[ ]:
 
 
 # for reproductivity
@@ -65,7 +66,7 @@ torch.manual_seed(hyper_parameters["seed"]) # pytorch random seed
 torch.backends.cudnn.deterministic = True
 
 
-# In[6]:
+# In[ ]:
 
 
 data_home = config["data_home"]
@@ -75,7 +76,7 @@ valid_data_path = os.path.join(data_home, experiment_name, config["valid_data"])
 rel2id_path = os.path.join(data_home, experiment_name, config["rel2id"])
 
 
-# In[7]:
+# In[ ]:
 
 
 if config["logger"] == "wandb":
@@ -90,13 +91,15 @@ if config["logger"] == "wandb":
     model_state_dict_dir = wandb.run.dir
     logger = wandb
 else:
-    logger = DefaultLogger(config["log_path"], experiment_name, config["run_name"], hyper_parameters)
+    logger = DefaultLogger(config["log_path"], experiment_name, config["run_name"], config["run_id"], hyper_parameters)
     model_state_dict_dir = config["path_to_save_model"]
+    if not os.path.exists(model_state_dict_dir):
+        os.makedirs(model_state_dict_dir)
 
 
 # # Load Data
 
-# In[8]:
+# In[ ]:
 
 
 train_data = json.load(open(train_data_path, "r", encoding = "utf-8"))
@@ -105,7 +108,7 @@ valid_data = json.load(open(valid_data_path, "r", encoding = "utf-8"))
 
 # # Split
 
-# In[9]:
+# In[ ]:
 
 
 # @specific
@@ -125,14 +128,14 @@ elif config["encoder"] in {"BiLSTM", }:
         return tok2char_span
 
 
-# In[10]:
+# In[ ]:
 
 
 preprocessor = Preprocessor(tokenize_func = tokenize, 
                             get_tok2char_span_map_func = get_tok2char_span_map)
 
 
-# In[11]:
+# In[ ]:
 
 
 # train and valid max token num
@@ -145,7 +148,7 @@ for sample in all_data:
 max_tok_num
 
 
-# In[12]:
+# In[ ]:
 
 
 if max_tok_num > hyper_parameters["max_seq_len"]:
@@ -161,7 +164,7 @@ if max_tok_num > hyper_parameters["max_seq_len"]:
                                                          )
 
 
-# In[13]:
+# In[ ]:
 
 
 print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
@@ -169,7 +172,7 @@ print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
 
 # # Tagger (Decoder)
 
-# In[14]:
+# In[ ]:
 
 
 max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
@@ -179,7 +182,7 @@ handshaking_tagger = HandshakingTaggingScheme(rel2id = rel2id, max_seq_len = max
 
 # # Dataset
 
-# In[15]:
+# In[ ]:
 
 
 if config["encoder"] == "BERT":
@@ -205,7 +208,7 @@ elif config["encoder"] in {"BiLSTM", }:
     data_maker = DataMaker4BiLSTM(text2indices, get_tok2char_span_map, handshaking_tagger)
 
 
-# In[16]:
+# In[ ]:
 
 
 class MyDataset(Dataset):
@@ -274,10 +277,10 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
 
 
 if config["encoder"] == "BERT":
-    roberta = AutoModel.from_pretrained(config["bert_path"])
-    hidden_size = roberta.config.hidden_size
+    encoder = AutoModel.from_pretrained(config["bert_path"])
+    hidden_size = encoder.config.hidden_size
     fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size]).to(device)
-    rel_extractor = TPLinkerBert(roberta, 
+    rel_extractor = TPLinkerBert(encoder, 
                                  len(rel2id), 
                                  fake_inputs,
                                  hyper_parameters["shaking_type"],
@@ -324,7 +327,15 @@ rel_extractor = rel_extractor.to(device)
 # In[ ]:
 
 
-# sum(x.numel() for x in rel_extractor.parameters())
+# all_paras = sum(x.numel() for x in rel_extractor.parameters())
+# enc_paras = sum(x.numel() for x in encoder.parameters())
+
+
+# In[ ]:
+
+
+# print(all_paras, enc_paras)
+# print(all_paras - enc_paras)
 
 
 # # Metrics
