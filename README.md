@@ -19,7 +19,7 @@ Download [BERT-BASE-CASED](https://huggingface.co/bert-base-cased) and put it un
 
 ## Train
 Set configuration in `tplinker/config.py` as follows:
-```
+```python
 common["exp_name"] = nyt_star # webnlg_star, nyt, webnlg
 common["device_num"] = 0 # 1, 2, 3 ...
 common["encoder"] = "BERT" # BiLSTM
@@ -39,7 +39,7 @@ python train.py
 ```
 ## Evaluation
 Set configuration in `tplinker/config.py` as follows:
-```
+```python
 eval_config["run_ids"] = ["46qer3r9", ] # run id is recorded in training log
 eval_config["last_k_model"] = 1 # only use the last k models in these runs to output results
 # Leave the rest as the same as the training
