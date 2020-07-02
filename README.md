@@ -1,4 +1,4 @@
-# JointExtraction
+# TPLinker
 ## Data
 ### download data
 Get and preprocess NYT* and WebNLG* following [CasRel](https://github.com/weizhepei/CasRel/tree/master/data) (note: named NYT and WebNLG by CasRel).
