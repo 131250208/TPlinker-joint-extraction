@@ -1,7 +1,9 @@
 # TPLinker
 This repository contains all the code of the implementation for the paper: TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking. \[[PDF](https://drive.google.com/file/d/1TN_6DnoI1LLQjPIS-wOJ0UKf1yDw23mi/view?usp=sharing)\]
 ## Overview
-<img src="https://user-images.githubusercontent.com/7437595/95205135-8bf08d80-0817-11eb-80bb-8f559f072c8c.png" alt="framework" width="768"/>
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/7437595/95205135-8bf08d80-0817-11eb-80bb-8f559f072c8c.png" alt="framework" width="768"/>
+</p>
 
 **The Framework of TPLinker. SH is short for subject head, OH is short for object head, ST is
 short for subject tail, and OT is short for object tail.**
