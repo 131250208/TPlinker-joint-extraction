@@ -10,11 +10,15 @@ short for subject tail, and OT is short for object tail.**
 
 ## Results
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/7437595/95205571-205af000-0818-11eb-9a1a-ea94db47a31d.png" alt="main_res" width="768"/>
+  <img src="https://user-images.githubusercontent.com/7437595/95207775-d0c9f380-081a-11eb-95e9-976c58acab84.png" alt="data_statistics" width="768"/>
 </p>
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/7437595/95205574-218c1d00-0818-11eb-9638-5da82cb43ad8.png" alt="res2" width="768"/>
+  <img src="https://user-images.githubusercontent.com/7437595/95207797-d6273e00-081a-11eb-8d6d-f00b3e20bef7.png" alt="main_res" width="768"/>
+</p>
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/7437595/95207811-d9bac500-081a-11eb-87b4-2d917cdc6e21.png" alt="res2" width="768"/>
 </p>
 
 ## Usage
