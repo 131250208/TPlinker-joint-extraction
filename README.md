@@ -26,13 +26,12 @@ short for subject tail, and OT is short for object tail.**
 ### Prerequisites
 Our experiments are conducted on Python 3.6 and Pytorch 1.4. 
 The main requirements are:
-```python
 * tqdm
 * glove-python-binary==0.2.0
 * transformers==2.10.0
 * wandb # for logging the results
 * yaml
-```
+
 In the root directory, run
 ```bash
 pip install -e .
