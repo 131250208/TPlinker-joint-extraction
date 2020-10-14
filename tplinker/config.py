@@ -74,7 +74,7 @@ eval_config = {
 
 bert_config = {
     "data_home": "../data4bert",
-    "bert_path": "../pretrained_model/bert-base-cased",
+    "bert_path": "../../pretrained_models/bert-base-cased",
     "hyper_parameters": {
         "lr": 5e-5,
     },
@@ -82,7 +82,7 @@ bert_config = {
 bilstm_config = {
     "data_home": "../data4bilstm",
     "token2idx": "token2idx.json",
-    "pretrained_word_embedding_path": "../pretrained_word_emb/glove_300_nyt.emb",
+    "pretrained_word_embedding_path": "../../pretrained_emb/glove_300_nyt.emb",
     "hyper_parameters": {
          "lr": 1e-3,
          "enc_hidden_size": 300,
