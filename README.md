@@ -60,6 +60,8 @@ Get raw NYT from [CopyRE](https://github.com/xiangrongzeng/copy_re),  rename raw
 
 Get WebNLG from [ETL-Span](https://github.com/yubowen-ph/JointER/tree/master/dataset/WebNLG/data), rename train.json and dev.json to train_data.json and valid_data.json and move them to `ori_data/webnlg`, rename test.json to test_data.json and put it under `ori_data/webnlg/test_data`.
 
+If you are bother to prepare data on your own, you could download our preprocessed [datasets](https://drive.google.com/file/d/1SsG3p-nxMGh9QInz-JcuM1avEw0YmaPu/view?usp=sharing).
+
 #### build data
 Build data by `preprocess/BuildData.ipynb`.
 Set configuration in `preprocess/build_data_config.yaml`.
@@ -68,6 +70,8 @@ e.g. To build NYT*, set `exp_name` to `nyt_star` and set `ori_data_format` to `c
 
 ### Pretrained Model and Word Embeddings
 Download [BERT-BASE-CASED](https://huggingface.co/bert-base-cased) and put it under `../pretrained_models`. Pretrain word embeddings by `preprocess/Pretrain_Word_Embedding.ipynb` and put models under `../pretrained_emb`.
+
+If you are bother to train word embeddings by yourself, use [our's](https://drive.google.com/file/d/1IQu_tdqEdExqyaeXJ4QSjUbWPQ3kxZKE/view?usp=sharing) directly.
 
 ### Train
 Set configuration in `tplinker/config.py` as follows:
