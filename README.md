@@ -1,5 +1,5 @@
 # TPLinker
-This repository contains all the code of the official implementation for the paper: **TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking.** \[[PDF](https://drive.google.com/file/d/1fCmbBi_4mzFmzLS-ovtEyRigiM7wWigM/view?usp=sharing)\] 
+This repository contains all the code of the official implementation for the paper: **TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking.** \[[PDF](https://drive.google.com/file/d/17iFHB2rp2-3MtRlXrIFH38APKk3SPtyv/view?usp=sharing)\] 
 The paper has been accepted to appear at **COLING 2020**.
 
 - [Model](#model)
