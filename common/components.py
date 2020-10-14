@@ -115,16 +115,16 @@ class HandshakingKernel(nn.Module):
             hidden_each_step = seq_hiddens[:, ind, :]
             # seq_len - ind: only shake afterwards
             repeat_hiddens = hidden_each_step[:, None, :].repeat(1, seq_len - ind, 1)  
-            after_hiddens = seq_hiddens[:, ind:, :]
+            visual_hiddens = seq_hiddens[:, ind:, :]
             if self.shaking_type == "cln":
-                shaking_hiddens = self.cond_layer_norm(after_hiddens, repeat_hiddens)
+                shaking_hiddens = self.cond_layer_norm(visual_hiddens, repeat_hiddens)
             elif self.shaking_type == "cat":
-                shaking_hiddens = torch.cat([repeat_hiddens, after_hiddens], dim = -1)
+                shaking_hiddens = torch.cat([repeat_hiddens, visual_hiddens], dim = -1)
                 shaking_hiddens = torch.tanh(self.combine_fc(shaking_hiddens))
             elif self.shaking_type == "res_gate":
                 gate = torch.sigmoid(self.Wg(repeat_hiddens))
-                cond_hiddens = after_hiddens * gate
-                res_hiddens = torch.cat([repeat_hiddens, after_hiddens, cond_hiddens], dim = -1)
+                cond_hiddens = visual_hiddens * gate
+                res_hiddens = torch.cat([repeat_hiddens, visual_hiddens, cond_hiddens], dim = -1)
                 shaking_hiddens = torch.tanh(self.Wo(res_hiddens))
             
             shaking_hiddens_list.append(shaking_hiddens)

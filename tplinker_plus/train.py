@@ -43,7 +43,7 @@ hyper_parameters = config["hyper_parameters"]
 
 # In[3]:
 
-
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
 os.environ["CUDA_VISIBLE_DEVICES"] = str(config["device_num"])
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -400,29 +400,29 @@ rel_extractor = rel_extractor.to(device)
 # In[23]:
 
 
-# loss func
-def multilabel_categorical_crossentropy(y_pred, y_true):
-    """
-    y_true and y_pred have the same shape，elements in y_true are either 0 or 1，
-         1 tags positive classes，0 tags negtive classes(means tok-pair does not have this type of link).
-    """
-    y_pred = (1 - 2 * y_true) * y_pred # -1 -> pos classes, 1 -> neg classes
-    y_pred_neg = y_pred - y_true * 1e12 # mask the pred outputs of pos classes
-    y_pred_pos = y_pred - (1 - y_true) * 1e12 # mask the pred outputs of neg classes
-    zeros = torch.zeros_like(y_pred[..., :1]) # st - st
-    y_pred_neg = torch.cat([y_pred_neg, zeros], dim = -1)
-    y_pred_pos = torch.cat([y_pred_pos, zeros], dim = -1)
-    neg_loss = torch.logsumexp(y_pred_neg, dim = -1) # +1: si - (-1), make -1 > si
-    pos_loss = torch.logsumexp(y_pred_pos, dim = -1) # +1: 1 - sj, make sj > 1
-    return (neg_loss + pos_loss).mean()
-loss_func = multilabel_categorical_crossentropy
+# # loss func
+# def multilabel_categorical_crossentropy(y_pred, y_true):
+#     """
+#     y_true and y_pred have the same shape，elements in y_true are either 0 or 1，
+#          1 tags positive classes，0 tags negtive classes(means tok-pair does not have this type of link).
+#     """
+#     y_pred = (1 - 2 * y_true) * y_pred # -1 -> pos classes, 1 -> neg classes
+#     y_pred_neg = y_pred - y_true * 1e12 # mask the pred outputs of pos classes
+#     y_pred_pos = y_pred - (1 - y_true) * 1e12 # mask the pred outputs of neg classes
+#     zeros = torch.zeros_like(y_pred[..., :1]) # st - st
+#     y_pred_neg = torch.cat([y_pred_neg, zeros], dim = -1)
+#     y_pred_pos = torch.cat([y_pred_pos, zeros], dim = -1)
+#     neg_loss = torch.logsumexp(y_pred_neg, dim = -1) # +1: si - (-1), make -1 > si
+#     pos_loss = torch.logsumexp(y_pred_pos, dim = -1) # +1: 1 - sj, make sj > 1
+#     return (neg_loss + pos_loss).mean()
+# loss_func = multilabel_categorical_crossentropy
 
 
 # In[24]:
 
 
 metrics = MetricsCalculator(handshaking_tagger)
-
+loss_func = lambda y_pred, y_true: metrics.loss_func(y_pred, y_true, ghm = hyper_parameters["ghm"])
 
 # # Train
 

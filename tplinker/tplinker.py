@@ -265,6 +265,7 @@ class DataMaker4Bert():
                                     return_offsets_mapping = True, 
                                     add_special_tokens = False,
                                     max_length = max_seq_len, 
+                                    truncation = True,
                                     pad_to_max_length = True)
 
 

@@ -1,0 +1,50 @@
+exp_name: covid19_rel_lianxiangjia
+model_state_dict_dir: ./wandb
+run_ids:
+# no dist
+#  - 1w4mk6mr
+#  - 3pdl0yv9
+#  - e48u3t8g
+#  - 14ooykvx
+#  - 3tasch7j
+# + dist emb
+ - 2s5jq1ho
+ - llvea66v
+ - 3mjun6d5
+ - 31hmg1nh
+ - 3r96671x
+
+last_k_model: 1
+
+data_home: ../data4bert
+test_data: "*test*.json"
+rel2id: rel2id.json
+ 
+device_num: 1
+
+encoder: BERT
+bert_path: /home/wangyucheng/opt/transformers_models_h5/bert-base-cased
+
+# # for BiLSTM
+# enc_hidden_size: 128
+# dec_hidden_size: 256
+# emb_dropout: 0.1
+# rnn_dropout: 0.1
+# word_embedding_dim: 100
+# token2idx: token2idx.json
+# pretrained_word_embedding_path: ../pretrained_word_emb/glove_100_webnlg.emb
+
+batch_size: 16
+force_split: false
+max_test_seq_len: 200
+sliding_len: 50
+shaking_type: cln
+dist_emb_size: 512
+tok_pair_sample_rate: 1
+correct: whole_text
+
+# results
+save_res: true
+save_res_dir: ../results
+# score: set true only when test set tagged
+score: false

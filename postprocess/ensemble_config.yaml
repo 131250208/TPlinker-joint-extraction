@@ -1,0 +1,20 @@
+res_dir: ../results/covid19_rel_lianxiangjia
+run_ids:
+#  - 1w4mk6mr
+#  - 3pdl0yv9
+#  - e48u3t8g
+#  - 14ooykvx
+#  - 3tasch7j
+ - 2s5jq1ho
+ - llvea66v
+ - 3mjun6d5
+ - 31hmg1nh
+ - 3r96671x
+ 
+last_k_res: 1
+
+keyword: test_data
+
+vote_threshold: 4
+
+ensemble_res_dir: ../results/covid19_rel_lianxiangjia/ensemble

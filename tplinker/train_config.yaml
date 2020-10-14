@@ -1,0 +1,67 @@
+exp_name: nyt_single
+run_name: TP1+Cat+BE
+
+train_data: train_data.json
+valid_data: valid_data.json
+rel2id: rel2id.json
+
+device_num: 1
+
+# set logger
+# if use default logger, must provide a log path and a path to save model, if use wandb, model state will be upload to the cloud
+# logger: wandb # wandb, default
+
+logger: default
+log_path: ./default.log
+path_to_save_model: ./model_state
+ 
+encoder: BERT
+data_home: ../data4bert
+bert_path: /home/wangyucheng/opt/transformers_models_h5/bert-base-cased
+
+# encoder: BiLSTM
+# token2idx: token2idx.json
+# data_home: ../data4bilstm
+# pretrained_word_embedding_path: ../pretrained_word_emb/glove_300_nyt.emb
+
+hyper_parameters:
+ batch_size: 24
+ epochs: 200
+ lr: 5e-5
+ seed: 2333
+ log_interval: 10
+ max_seq_len: 100
+ sliding_len: 20
+ loss_weight_recover_steps: 10000
+ shaking_type: cat
+ # distance emb, ent_add_dist and rel_add_dist are valid only if dist_emb_size != -1
+ dist_emb_size: -1
+ ent_add_dist: false
+ rel_add_dist: false
+ match_pattern: only_head_text
+ 
+ # CosineAnnealingWarmRestarts
+ scheduler: CAWR # Step
+ T_mult: 1
+ rewarm_epoch_num: 2
+ 
+#  # StepLR
+#  scheduler: Step
+#  decay_rate: 0.99
+#  decay_steps: 100
+ 
+#  # for BiLSTM
+#  enc_hidden_size: 300
+#  dec_hidden_size: 600
+#  emb_dropout: 0.1
+#  rnn_dropout: 0.1
+#  word_embedding_dim: 300
+ 
+# when to save the model state dict
+f1_2_save: 0
+# whether train from scratch
+fr_scratch: true
+# note 
+note: start from scratch
+# if not fr scratch, set a model_state_dict
+model_state_dict_path: stake

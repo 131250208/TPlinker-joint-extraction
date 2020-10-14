@@ -1,0 +1,43 @@
+exp_name: webnlg_single
+model_state_dict_dir: ./wandb
+run_ids:
+ - 3k0y4z53
+
+last_k_model: 1
+
+
+test_data: "*test*.json"
+rel2id: rel2id.json
+ 
+device_num: 1
+
+# encoder: BERT
+# data_home: ../data4bert
+# bert_path: /home/wangyucheng/opt/transformers_models_h5/bert-base-cased
+
+# for BiLSTM
+encoder: BiLSTM
+enc_hidden_size: 300
+dec_hidden_size: 600
+emb_dropout: 0.1
+rnn_dropout: 0.1
+word_embedding_dim: 300
+token2idx: token2idx.json
+data_home: ../data4bilstm
+
+batch_size: 32
+force_split: false
+max_test_seq_len: 512
+sliding_len: 20
+match_pattern: only_head_text
+shaking_type: cat
+# distance emb, ent_add_dist and rel_add_dist are valid only if dist_emb_size != -1
+dist_emb_size: 512
+ent_add_dist: true
+rel_add_dist: true
+
+# results
+save_res: false
+save_res_dir: ../results
+# score: set true only when test set tagged
+score: true

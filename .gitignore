@@ -2,7 +2,7 @@
 wandb/
 *model*/
 *.json
-*.yaml
+# *.yaml
 *.pt
 *.emb
 CasRel/

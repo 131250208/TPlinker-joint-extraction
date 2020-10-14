@@ -209,6 +209,7 @@ class DataMaker4Bert():
                                     return_offsets_mapping = True, 
                                     add_special_tokens = False,
                                     max_length = max_seq_len, 
+                                    truncation = True,
                                     pad_to_max_length = True)
 
 
@@ -440,7 +441,75 @@ class TPLinkerPlusBiLSTM(nn.Module):
 class MetricsCalculator():
     def __init__(self, shaking_tagger):
         self.shaking_tagger = shaking_tagger
+        self.last_weights = None # for exponential moving averaging
         
+    def GHM(self, gradient, bins = 10, beta = 0.9):
+        '''
+        gradient_norm: gradient_norms of all examples in this batch; (batch_size, shaking_seq_len)
+        '''
+        avg = torch.mean(gradient)
+        std = torch.std(gradient) + 1e-12
+        gradient_norm = torch.sigmoid((gradient - avg) / std) # normalization and pass through sigmoid to 0 ~ 1.
+        
+        min_, max_ = torch.min(gradient_norm), torch.max(gradient_norm)
+        gradient_norm = (gradient_norm - min_) / (max_ - min_)
+        gradient_norm = torch.clamp(gradient_norm, 0, 0.9999999) # ensure elements in gradient_norm != 1.
+        
+        example_sum = torch.flatten(gradient_norm).size()[0] # N
+
+        # calculate weights    
+        current_weights = torch.zeros(bins).to(gradient.device)
+        hits_vec = torch.zeros(bins).to(gradient.device)
+        count_hits = 0 # coungradient_normof hits
+        for i in range(bins):
+            bar = float((i + 1) / bins)
+            hits = torch.sum((gradient_norm <= bar)) - count_hits
+            count_hits += hits
+            hits_vec[i] = hits.item()
+            current_weights[i] = example_sum / bins / (hits.item() + example_sum / bins )
+        # EMA: exponential moving averaging
+#         print()
+#         print("hits_vec: {}".format(hits_vec))
+#         print("current_weights: {}".format(current_weights))
+        if self.last_weights is None:
+            self.last_weights = torch.ones(bins).to(gradient.device) # init by ones
+        current_weights = self.last_weights * beta + (1 - beta) * current_weights
+        self.last_weights = current_weights
+#         print("ema current_weights: {}".format(current_weights))
+        
+        # weights4examples: pick weights for all examples
+        weight_pk_idx = (gradient_norm / (1 / bins)).long()[:, :, None]
+        weights_rp = current_weights[None, None, :].repeat(gradient_norm.size()[0], gradient_norm.size()[1], 1)
+        weights4examples = torch.gather(weights_rp, -1, weight_pk_idx).squeeze(-1)
+        weights4examples /= torch.sum(weights4examples)
+        return weights4examples * gradient # return weighted gradients
+
+    # loss func
+    def _multilabel_categorical_crossentropy(self, y_pred, y_true, ghm = True):
+        """
+        y_pred: (batch_size, shaking_seq_len, type_size)
+        y_true: (batch_size, shaking_seq_len, type_size)
+        y_true and y_pred have the same shape，elements in y_true are either 0 or 1，
+             1 tags positive classes，0 tags negtive classes(means tok-pair does not have this type of link).
+        """
+        y_pred = (1 - 2 * y_true) * y_pred # -1 -> pos classes, 1 -> neg classes
+        y_pred_neg = y_pred - y_true * 1e12 # mask the pred oudtuts of pos classes
+        y_pred_pos = y_pred - (1 - y_true) * 1e12 # mask the pred oudtuts of neg classes
+        zeros = torch.zeros_like(y_pred[..., :1]) # st - st
+        y_pred_neg = torch.cat([y_pred_neg, zeros], dim = -1)
+        y_pred_pos = torch.cat([y_pred_pos, zeros], dim = -1)
+        neg_loss = torch.logsumexp(y_pred_neg, dim = -1) 
+        pos_loss = torch.logsumexp(y_pred_pos, dim = -1) 
+        
+        if ghm:
+            return (self.GHM(neg_loss + pos_loss, bins = 1000)).sum() 
+        else:
+            return (neg_loss + pos_loss).mean()
+        
+    
+    def loss_func(self, y_pred, y_true, ghm):
+        return self._multilabel_categorical_crossentropy(y_pred, y_true, ghm = ghm)
+    
     def get_sample_accuracy(self, pred, truth):
         '''
         计算该batch的pred与truth全等的样本比例

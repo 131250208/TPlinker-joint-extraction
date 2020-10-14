@@ -1,0 +1,20 @@
+exp_name: xf_event_extr_t1
+data_in_dir: ../ori_data
+ori_data_format: tplinker # casrel, etl_span, raw_nyt, tplinker
+
+# if build data for BERT, use these 3 lines and comment the following 2 lines(for BiLSTM).
+encoder: BERT
+bert_path: ../pretrained_model/chinese-roberta-wwm-ext
+data_out_dir: ../data4bert
+
+# if build data for BiLSTM, use these 2 lines and comment above 3 lines.
+# encoder: BiLSTM
+# data_out_dir: ../data4bilstm
+
+# parameters
+# ignore_subword: ignore subwords when search entities(in adding character level spans)
+# separate_char_by_white: e.g. "$%sdkn839," -> "$% sdkn839 ," , will make original char spans invalid
+add_char_span: false
+ignore_subword: false
+separate_char_by_white: false
+check_tok_span: true
