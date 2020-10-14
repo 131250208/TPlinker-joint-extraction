@@ -64,7 +64,7 @@ In the configuration file, set `exp_name` corresponding to the directory name, s
 e.g. To build NYT*, set `exp_name` to `nyt_star` and set `ori_data_format` to `casrel`. See `build_data_config.yaml` for more details.
 
 ### Pretrained Model and Word Embeddings
-Download [BERT-BASE-CASED](https://huggingface.co/bert-base-cased) and put it under `pretrained_model`. Pretrain word embeddings by `preprocess/Pretrain_Word_Embedding.ipynb` and put models under `pretrained_word_emb`.
+Download [BERT-BASE-CASED](https://huggingface.co/bert-base-cased) and put it under `../pretrained_models`. Pretrain word embeddings by `preprocess/Pretrain_Word_Embedding.ipynb` and put models under `../pretrained_emb`.
 
 ### Train
 Set configuration in `tplinker/config.py` as follows:
