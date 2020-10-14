@@ -44,7 +44,7 @@ train_config = {
         "max_seq_len": 100,
         "sliding_len": 20,
         "scheduler": "CAWR", # Step
-        "ghm": False,
+        "ghm": False, # set True if you want to use GHM to adjust the weights, this will speed up the training process and might improve the results.
         "tok_pair_sample_rate": 1,
     },
 }
