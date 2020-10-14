@@ -1,7 +1,9 @@
 # TPLinker
+
 **TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking**
-TPLinker achieves SOTA performance on NYT (92.6) and WebNLG (92.3). This repository contains all the code of the official implementation for the paper: **TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking.** \[[PDF](https://drive.google.com/file/d/17iFHB2rp2-3MtRlXrIFH38APKk3SPtyv/view?usp=sharing)\] 
-The paper has been accepted to appear at **COLING 2020**. 
+
+TPLinker achieves SOTA performance on NYT (TPLinker: 91.9, TPlinkerPlus: 92.6) and WebNLG (TPLinker: 91.9, TPlinkerPlus: 92.3). This repository contains all the code of the official implementation for the paper: **TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking.** \[[PDF](https://drive.google.com/file/d/17iFHB2rp2-3MtRlXrIFH38APKk3SPtyv/view?usp=sharing)\] 
+The paper has been accepted to appear at **COLING 2020**. Note that the details of TPLinkerPlus will be published in the extended paper, which we are still working on.
 
 - [Model](#model)
 - [Results](#results)
@@ -28,11 +30,11 @@ short for subject tail, and OT is short for object tail.**
 </p>
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/7437595/95207797-d6273e00-081a-11eb-8d6d-f00b3e20bef7.png" alt="main_res" width="768"/>
+  <img src="https://user-images.githubusercontent.com/7437595/95995846-9557a680-0e64-11eb-96ca-da77b2f88dbf.png" alt="main_res_plus" width="768"/>
 </p>
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/7437595/95207811-d9bac500-081a-11eb-87b4-2d917cdc6e21.png" alt="res2" width="768"/>
+  <img src="https://user-images.githubusercontent.com/7437595/95995856-97216a00-0e64-11eb-8b81-2910e48eb3b2.png" alt="split_res_plus" width="768"/>
 </p>
 
 ## Usage
