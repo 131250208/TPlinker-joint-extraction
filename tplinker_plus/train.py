@@ -335,14 +335,13 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
 
 
 if config["encoder"] == "BERT":
-    roberta = AutoModel.from_pretrained(config["bert_path"])
-    hidden_size = roberta.config.hidden_size
+    encoder = AutoModel.from_pretrained(config["bert_path"])
+    hidden_size = encoder.config.hidden_size
     fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size]).to(device)
-    rel_extractor = TPLinkerPlusBert(roberta, 
+    rel_extractor = TPLinkerPlusBert(encoder, 
                                      tag_size,
                                      hyper_parameters["shaking_type"],
                                      hyper_parameters["inner_enc_type"],
-                                     hyper_parameters["dist_emb_size"],
                                      hyper_parameters["tok_pair_sample_rate"]
                                     )
     
@@ -373,7 +372,6 @@ elif config["encoder"] in {"BiLSTM", }:
                                        tag_size, 
                                        hyper_parameters["shaking_type"],
                                        hyper_parameters["inner_enc_type"],
-                                       hyper_parameters["dist_emb_size"],
                                        hyper_parameters["tok_pair_sample_rate"],
                                       )
 

@@ -318,7 +318,6 @@ class TPLinkerPlusBert(nn.Module):
                  tag_size, 
                  shaking_type, 
                  inner_enc_type,
-                 dist_emb_size,
                  tok_pair_sample_rate = 1):
         super().__init__()
         self.encoder = encoder
@@ -375,7 +374,6 @@ class TPLinkerPlusBiLSTM(nn.Module):
                  tag_size,
                  shaking_type,
                  inner_enc_type,
-                 dist_emb_size,
                  tok_pair_sample_rate = 1
                 ):
         super().__init__()

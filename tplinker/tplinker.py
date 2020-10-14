@@ -415,21 +415,10 @@ class TPLinkerBert(nn.Module):
         # handshaking kernel
         self.handshaking_kernel = HandshakingKernel(hidden_size, shaking_type, inner_enc_type)
         
-        # distance embedding
+                # distance embedding
         self.dist_emb_size = dist_emb_size
-        if dist_emb_size != -1:
-            dist_emb = torch.zeros([dist_emb_size, hidden_size]).to(fake_inputs.device)
-            for d in range(dist_emb_size):
-                for i in range(hidden_size):
-                    if i % 2 == 0:
-                        dist_emb[d][i] = math.sin(d / 10000**(i / hidden_size))
-                    else:
-                        dist_emb[d][i] = math.cos(d / 10000**((i - 1) / hidden_size))
-            seq_len = fake_inputs.size()[1]
-            dist_embbeding_segs = []
-            for after_num in range(seq_len, 0, -1):
-                dist_embbeding_segs.append(dist_emb[:after_num, :])
-            self.dist_embbedings = torch.cat(dist_embbeding_segs, dim = 0)
+        self.dist_embbedings = None # it will be set in the first forwarding
+        
         self.ent_add_dist = ent_add_dist
         self.rel_add_dist = rel_add_dist
         
@@ -441,14 +430,40 @@ class TPLinkerBert(nn.Module):
         
         # shaking_hiddens: (batch_size, 1 + ... + seq_len, hidden_size)
         shaking_hiddens = self.handshaking_kernel(last_hidden_state)
-        if self.dist_emb_size != -1 and self.ent_add_dist:
-            shaking_hiddens4ent = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
-        else:
-            shaking_hiddens4ent = shaking_hiddens
-        if self.dist_emb_size != -1 and self.rel_add_dist:
-            shaking_hiddens4rel = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
-        else:
-            shaking_hiddens4rel = shaking_hiddens
+        shaking_hiddens4ent = shaking_hiddens
+        shaking_hiddens4rel = shaking_hiddens
+        
+        # add distance embeddings if it is set
+        if self.dist_emb_size != -1:
+            # set self.dist_embbedings
+            hidden_size = shaking_hiddens.size()[-1]
+            if self.dist_embbedings is None:
+                dist_emb = torch.zeros([self.dist_emb_size, hidden_size]).to(shaking_hiddens.device)
+                for d in range(self.dist_emb_size):
+                    for i in range(hidden_size):
+                        if i % 2 == 0:
+                            dist_emb[d][i] = math.sin(d / 10000**(i / hidden_size))
+                        else:
+                            dist_emb[d][i] = math.cos(d / 10000**((i - 1) / hidden_size))
+                seq_len = input_ids.size()[1]
+                dist_embbeding_segs = []
+                for after_num in range(seq_len, 0, -1):
+                    dist_embbeding_segs.append(dist_emb[:after_num, :])
+                self.dist_embbedings = torch.cat(dist_embbeding_segs, dim = 0)
+            
+            if self.ent_add_dist:
+                shaking_hiddens4ent = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+            if self.rel_add_dist:
+                shaking_hiddens4rel = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+                
+#         if self.dist_emb_size != -1 and self.ent_add_dist:
+#             shaking_hiddens4ent = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+#         else:
+#             shaking_hiddens4ent = shaking_hiddens
+#         if self.dist_emb_size != -1 and self.rel_add_dist:
+#             shaking_hiddens4rel = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+#         else:
+#             shaking_hiddens4rel = shaking_hiddens
             
         ent_shaking_outputs = self.ent_fc(shaking_hiddens4ent)
             
@@ -510,19 +525,7 @@ class TPLinkerBiLSTM(nn.Module):
         
         # distance embedding
         self.dist_emb_size = dist_emb_size
-        if dist_emb_size != -1:
-            dist_emb = torch.zeros([dist_emb_size, hidden_size]).to(fake_inputs.device)
-            for d in range(dist_emb_size):
-                for i in range(hidden_size):
-                    if i % 2 == 0:
-                        dist_emb[d][i] = math.sin(d / 10000**(i / hidden_size))
-                    else:
-                        dist_emb[d][i] = math.cos(d / 10000**((i - 1) / hidden_size))
-            seq_len = fake_inputs.size()[1]
-            dist_embbeding_segs = []
-            for after_num in range(seq_len, 0, -1):
-                dist_embbeding_segs.append(dist_emb[:after_num, :])
-            self.dist_embbedings = torch.cat(dist_embbeding_segs, dim = 0)
+        self.dist_embbedings = None # it will be set in the first forwarding
         
         self.ent_add_dist = ent_add_dist
         self.rel_add_dist = rel_add_dist
@@ -541,15 +544,32 @@ class TPLinkerBiLSTM(nn.Module):
         
         # shaking_hiddens: (batch_size, 1 + ... + seq_len, hidden_size)
         shaking_hiddens = self.handshaking_kernel(lstm_outputs)
-
-        if self.dist_emb_size != -1 and self.ent_add_dist:
-            shaking_hiddens4ent = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
-        else:
-            shaking_hiddens4ent = shaking_hiddens
-        if self.dist_emb_size != -1 and self.rel_add_dist:
-            shaking_hiddens4rel = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
-        else:
-            shaking_hiddens4rel = shaking_hiddens
+        shaking_hiddens4ent = shaking_hiddens
+        shaking_hiddens4rel = shaking_hiddens
+        
+        # add distance embeddings if it is set
+        if self.dist_emb_size != -1:
+            # set self.dist_embbedings
+            hidden_size = shaking_hiddens.size()[-1]
+            if self.dist_embbedings is None:
+                dist_emb = torch.zeros([self.dist_emb_size, hidden_size]).to(shaking_hiddens.device)
+                for d in range(self.dist_emb_size):
+                    for i in range(hidden_size):
+                        if i % 2 == 0:
+                            dist_emb[d][i] = math.sin(d / 10000**(i / hidden_size))
+                        else:
+                            dist_emb[d][i] = math.cos(d / 10000**((i - 1) / hidden_size))
+                seq_len = input_ids.size()[1]
+                dist_embbeding_segs = []
+                for after_num in range(seq_len, 0, -1):
+                    dist_embbeding_segs.append(dist_emb[:after_num, :])
+                self.dist_embbedings = torch.cat(dist_embbeding_segs, dim = 0)
+            
+            if self.ent_add_dist:
+                shaking_hiddens4ent = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+            if self.rel_add_dist:
+                shaking_hiddens4rel = shaking_hiddens + self.dist_embbedings[None,:,:].repeat(shaking_hiddens.size()[0], 1, 1)
+                
             
         ent_shaking_outputs = self.ent_fc(shaking_hiddens4ent)
         

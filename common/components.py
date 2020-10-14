@@ -231,17 +231,18 @@ class HandshakingKernel(nn.Module):
             hidden_each_step = seq_hiddens[:, ind, :]
             visible_hiddens = seq_hiddens[:, ind:, :] # ind: only look back
             repeat_hiddens = hidden_each_step[:, None, :].repeat(1, seq_len - ind, 1)  
-            inner_context = self.enc_inner_hiddens(visible_hiddens, self.inner_enc_type)
             
             if self.shaking_type == "cat":
                 shaking_hiddens = torch.cat([repeat_hiddens, visible_hiddens], dim = -1)
                 shaking_hiddens = torch.tanh(self.combine_fc(shaking_hiddens))
             elif self.shaking_type == "cat_plus":
+                inner_context = self.enc_inner_hiddens(visible_hiddens, self.inner_enc_type)
                 shaking_hiddens = torch.cat([repeat_hiddens, visible_hiddens, inner_context], dim = -1)
                 shaking_hiddens = torch.tanh(self.combine_fc(shaking_hiddens))
             elif self.shaking_type == "cln":
                 shaking_hiddens = self.tp_cln(visible_hiddens, repeat_hiddens)
             elif self.shaking_type == "cln_plus":
+                inner_context = self.enc_inner_hiddens(visible_hiddens, self.inner_enc_type)
                 shaking_hiddens = self.tp_cln(visible_hiddens, repeat_hiddens)
                 shaking_hiddens = self.inner_context_cln(shaking_hiddens, inner_context)
 

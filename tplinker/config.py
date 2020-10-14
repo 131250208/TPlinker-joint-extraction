@@ -5,14 +5,14 @@ common = {
     "exp_name": "nyt_star",
     "rel2id": "rel2id.json",
     "device_num": 1,
-#     "encoder": "BiLSTM",
-    "encoder": "BERT", 
+    "encoder": "BiLSTM",
+#     "encoder": "BERT", 
     "hyper_parameters": {
         "shaking_type": "cln_plus",
         "inner_enc_type": "lstm",
-        "dist_emb_size": -1,
-        "ent_add_dist": False,
-        "rel_add_dist": False,
+        "dist_emb_size": 100, # -1: do not use distance embedding; other number: need to be larger than the max_seq_len of the inputs
+        "ent_add_dist": True,
+        "rel_add_dist": True,
         "match_pattern": "only_head_text", # only_head_text, whole_text, only_head_index, whole_span
     },
 }
@@ -44,7 +44,7 @@ train_config = {
         "epochs": 100,
         "seed": 2333,
         "log_interval": 10,
-        "max_seq_len": 100,
+        "max_seq_len": 80,
         "sliding_len": 20,
         "loss_weight_recover_steps": 16000,
         "scheduler": "CAWR", # Step
