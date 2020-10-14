@@ -4,11 +4,12 @@ import random
 common = {
     "exp_name": "nyt_star",
     "rel2id": "rel2id.json",
-    "device_num": 3,
+    "device_num": 1,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
-        "shaking_type": "cln",
+        "shaking_type": "cln_plus",
+        "inner_enc_type": "lstm",
         "dist_emb_size": -1,
         "ent_add_dist": False,
         "rel_add_dist": False,
@@ -43,7 +44,7 @@ train_config = {
         "epochs": 100,
         "seed": 2333,
         "log_interval": 10,
-        "max_seq_len": 128,
+        "max_seq_len": 100,
         "sliding_len": 20,
         "loss_weight_recover_steps": 16000,
         "scheduler": "CAWR", # Step

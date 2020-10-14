@@ -315,9 +315,9 @@ class DataMaker4BiLSTM():
 
 class TPLinkerPlusBert(nn.Module):
     def __init__(self, encoder, 
-                 tag_size,
-                 fake_inputs, 
+                 tag_size, 
                  shaking_type, 
+                 inner_enc_type,
                  dist_emb_size,
                  tok_pair_sample_rate = 1):
         super().__init__()
@@ -329,7 +329,7 @@ class TPLinkerPlusBert(nn.Module):
         self.fc = nn.Linear(shaking_hidden_size, tag_size)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        self.handshaking_kernel = HandshakingKernel(shaking_hidden_size, shaking_type, inner_enc_type)
         
     def forward(self, input_ids, 
                 attention_mask, 
@@ -373,8 +373,8 @@ class TPLinkerPlusBiLSTM(nn.Module):
                  dec_hidden_size, 
                  rnn_dropout_rate,
                  tag_size,
-                 fake_inputs,
                  shaking_type,
+                 inner_enc_type,
                  dist_emb_size,
                  tok_pair_sample_rate = 1
                 ):
@@ -399,7 +399,7 @@ class TPLinkerPlusBiLSTM(nn.Module):
         self.fc = nn.Linear(shaking_hidden_size, tag_size)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        self.handshaking_kernel = HandshakingKernel(shaking_hidden_size, shaking_type, inner_enc_type)
         
     def forward(self, input_ids):
         # input_ids: (batch_size, seq_len)

@@ -391,8 +391,8 @@ class DataMaker4BiLSTM():
 class TPLinkerBert(nn.Module):
     def __init__(self, encoder, 
                  rel_size, 
-                 fake_inputs, 
                  shaking_type,
+                 inner_enc_type,
                  dist_emb_size,
                  ent_add_dist,
                  rel_add_dist
@@ -413,7 +413,7 @@ class TPLinkerBert(nn.Module):
             self.register_parameter("bias_4_tail_rel{}".format(ind), fc.bias)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        self.handshaking_kernel = HandshakingKernel(hidden_size, shaking_type, inner_enc_type)
         
         # distance embedding
         self.dist_emb_size = dist_emb_size
@@ -472,8 +472,8 @@ class TPLinkerBiLSTM(nn.Module):
                  dec_hidden_size, 
                  rnn_dropout_rate,
                  rel_size, 
-                 fake_inputs, 
-                 shaking_type, 
+                 shaking_type,
+                 inner_enc_type,
                  dist_emb_size, 
                  ent_add_dist, 
                  rel_add_dist):
@@ -506,7 +506,7 @@ class TPLinkerBiLSTM(nn.Module):
             self.register_parameter("bias_4_tail_rel{}".format(ind), fc.bias)
             
         # handshaking kernel
-        self.handshaking_kernel = HandshakingKernel(fake_inputs, shaking_type)
+        self.handshaking_kernel = HandshakingKernel(hidden_size, shaking_type, inner_enc_type)
         
         # distance embedding
         self.dist_emb_size = dist_emb_size

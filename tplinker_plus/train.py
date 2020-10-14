@@ -340,8 +340,8 @@ if config["encoder"] == "BERT":
     fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size]).to(device)
     rel_extractor = TPLinkerPlusBert(roberta, 
                                      tag_size,
-                                     fake_inputs,
                                      hyper_parameters["shaking_type"],
+                                     hyper_parameters["inner_enc_type"],
                                      hyper_parameters["dist_emb_size"],
                                      hyper_parameters["tok_pair_sample_rate"]
                                     )
@@ -371,8 +371,8 @@ elif config["encoder"] in {"BiLSTM", }:
                                        hyper_parameters["dec_hidden_size"],
                                        hyper_parameters["rnn_dropout"],
                                        tag_size, 
-                                       fake_inputs,
                                        hyper_parameters["shaking_type"],
+                                       hyper_parameters["inner_enc_type"],
                                        hyper_parameters["dist_emb_size"],
                                        hyper_parameters["tok_pair_sample_rate"],
                                       )
