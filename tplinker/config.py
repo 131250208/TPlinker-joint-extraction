@@ -5,14 +5,14 @@ common = {
     "exp_name": "nyt_star",
     "rel2id": "rel2id.json",
     "device_num": 1,
-    "encoder": "BiLSTM",
-#     "encoder": "BERT", 
+#     "encoder": "BiLSTM",
+    "encoder": "BERT", 
     "hyper_parameters": {
-        "shaking_type": "cln_plus",
-        "inner_enc_type": "lstm",
-        "dist_emb_size": 100, # -1: do not use distance embedding; other number: need to be larger than the max_seq_len of the inputs
-        "ent_add_dist": True,
-        "rel_add_dist": True,
+        "shaking_type": "cat",
+        "inner_enc_type": "lstm", # valid only if cat_plus or cln_plus is set
+        "dist_emb_size": -1, # -1: do not use distance embedding; other number: need to be larger than the max_seq_len of the inputs
+        "ent_add_dist": False,
+        "rel_add_dist": False,
         "match_pattern": "only_head_text", # only_head_text, whole_text, only_head_index, whole_span
     },
 }
@@ -23,13 +23,13 @@ train_config = {
     "train_data": "train_data.json",
     "valid_data": "valid_data.json",
     "rel2id": "rel2id.json",
-#     "logger": "wandb", # if wandb, comment the following four lines
+    "logger": "wandb", # if wandb, comment the following four lines
     
-    # if logger is set as default, uncomment the following four lines
-    "logger": "default", 
-    "run_id": run_id,
-    "log_path": "./default_log_dir/{}/default.log".format(run_id),
-    "path_to_save_model": "./default_log_dir/{}".format(run_id),
+#     # if logger is set as default, uncomment the following four lines
+#     "logger": "default", 
+#     "run_id": run_id,
+#     "log_path": "./default_log_dir/{}/default.log".format(run_id),
+#     "path_to_save_model": "./default_log_dir/{}".format(run_id),
 
     # when to save the model state dict
     "f1_2_save": 0,
@@ -44,7 +44,7 @@ train_config = {
         "epochs": 100,
         "seed": 2333,
         "log_interval": 10,
-        "max_seq_len": 80,
+        "max_seq_len": 100,
         "sliding_len": 20,
         "loss_weight_recover_steps": 16000,
         "scheduler": "CAWR", # Step

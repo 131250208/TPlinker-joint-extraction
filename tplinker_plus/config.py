@@ -2,7 +2,7 @@ import string
 import random
 
 common = {
-    "exp_name": "nyt_star",
+    "exp_name": "nyt",
     "rel2id": "rel2id.json",
     "device_num": 0,
 #     "encoder": "BiLSTM",
@@ -10,7 +10,7 @@ common = {
     "hyper_parameters": {
         "shaking_type": "cln_plus",
         "inner_enc_type": "lstm",
-        "match_pattern": "only_head_text", # only_head_text, whole_text, only_head_index, whole_span
+        "match_pattern": "whole_text", # only_head_text, whole_text, only_head_index, whole_span
     },
 }
 common["run_name"] = "{}+{}+{}".format("TP2", common["hyper_parameters"]["shaking_type"], common["encoder"]) + ""
@@ -20,13 +20,13 @@ train_config = {
     "train_data": "train_data.json",
     "valid_data": "valid_data.json",
     "rel2id": "rel2id.json",
-    #     "logger": "wandb", # if wandb, comment the following four lines
+    "logger": "wandb", # if wandb, comment the following four lines
    
-    # if logger is set as default, uncomment the following four lines
-    "logger": "default", 
-    "run_id": run_id,
-    "log_path": "./default_log_dir/{}/default.log".format(run_id),
-    "path_to_save_model": "./default_log_dir/{}".format(run_id),
+#     # if logger is set as default, uncomment the following four lines
+#     "logger": "default", 
+#     "run_id": run_id,
+#     "log_path": "./default_log_dir/{}/default.log".format(run_id),
+#     "path_to_save_model": "./default_log_dir/{}".format(run_id),
 
     # when to save the model state dict
     "f1_2_save": 0,
