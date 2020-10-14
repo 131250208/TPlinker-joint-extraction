@@ -10,7 +10,6 @@ from tqdm import tqdm
 import re
 from IPython.core.debugger import set_trace
 from pprint import pprint
-import unicodedata
 from transformers import AutoModel, BertTokenizerFast
 import copy
 import torch
@@ -31,7 +30,6 @@ import wandb
 import config
 from glove import Glove
 import numpy as np
-from torchsummary import summary
 
 
 # In[ ]:

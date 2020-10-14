@@ -2,29 +2,29 @@ import string
 import random
 
 common = {
-    "exp_name": "nyt_star",
+    "exp_name": "xf_event_extr_t1",
     "rel2id": "rel2id.json",
     "device_num": 3,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
-        "shaking_type": "cat",
+        "shaking_type": "cln",
         "dist_emb_size": -1,
         "ent_add_dist": False,
         "rel_add_dist": False,
-        "match_pattern": "only_head_text", # only_head_text, whole_text, only_head_index, whole_span
+        "match_pattern": "whole_text", # only_head_text, whole_text, only_head_index, whole_span
     },
 }
-common["run_name"] = "{}+{}+{}".format("TP1", common["hyper_parameters"]["shaking_type"], common["encoder"])
+common["run_name"] = "{}+{}+{}".format("TP1", common["hyper_parameters"]["shaking_type"], common["encoder"]) + "+g7"
 
 run_id = ''.join(random.sample(string.ascii_letters + string.digits, 8))
 train_config = {
-    "train_data": "train_data.json",
-    "valid_data": "valid_data.json",
+    "train_data": "train_data_7.json",
+    "valid_data": "valid_data_7.json",
     "rel2id": "rel2id.json",
-    "run_id": run_id,
 #     "logger": "wandb",
     "logger": "default", 
+    "run_id": run_id,
     "log_path": "./default_log_dir/{}/default.log".format(run_id),
     "path_to_save_model": "./default_log_dir/{}".format(run_id),
 
@@ -37,13 +37,13 @@ train_config = {
     # if not fr scratch, set a model_state_dict
     "model_state_dict_path": "",
     "hyper_parameters": {
-        "batch_size": 24,
+        "batch_size": 8,
         "epochs": 100,
         "seed": 2333,
         "log_interval": 10,
         "max_seq_len": 100,
         "sliding_len": 20,
-        "loss_weight_recover_steps": 10000,
+        "loss_weight_recover_steps": 16000,
         "scheduler": "CAWR", # Step
     },
 }
@@ -71,7 +71,7 @@ eval_config = {
 
 bert_config = {
     "data_home": "../data4bert",
-    "bert_path": "../pretrained_model/bert-base-cased",
+    "bert_path": "../pretrained_model/chinese-roberta-wwm-ext",
     "hyper_parameters": {
         "lr": 5e-5,
     },

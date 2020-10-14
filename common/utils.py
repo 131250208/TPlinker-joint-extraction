@@ -152,7 +152,7 @@ class Preprocessor:
                 text = re.sub("\s+", " ", text).strip()
             return text
 
-        for sample in tqdm(ori_data, desc = "separate characters by white"):
+        for sample in tqdm(ori_data, desc = "clean data"):
             sample["text"] = clean_text(sample["text"])
             if data_type == "test":
                 continue
@@ -163,6 +163,7 @@ class Preprocessor:
 
     def clean_data_w_span(self, ori_data):
         '''
+        stripe whitespaces and change spans
         add a stake to bad samples(char span error) and remove them from the clean data
         '''
         bad_samples, clean_data = [], []
@@ -178,7 +179,7 @@ class Preprocessor:
                 p -= 1
             return entity.strip(), entity_char_span
             
-        for sample in tqdm(ori_data, desc = "cleaning"):
+        for sample in tqdm(ori_data, desc = "clean data w char spans"):
             text = sample["text"]
 
             bad = False

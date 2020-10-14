@@ -318,7 +318,7 @@ class TPLinkerPlusBert(nn.Module):
                  fake_inputs, 
                  shaking_type, 
                  dist_emb_size,
-                 tok_pair_sample_rate):
+                 tok_pair_sample_rate = 1):
         super().__init__()
         self.encoder = encoder
         self.tok_pair_sample_rate = tok_pair_sample_rate
@@ -375,7 +375,7 @@ class TPLinkerPlusBiLSTM(nn.Module):
                  fake_inputs,
                  shaking_type,
                  dist_emb_size,
-                 tok_pair_sample_rate
+                 tok_pair_sample_rate = 1
                 ):
         super().__init__()
         self.word_embeds = nn.Embedding.from_pretrained(init_word_embedding_matrix, freeze = False)

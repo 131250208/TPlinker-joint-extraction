@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import json
@@ -29,36 +29,26 @@ from tplinker_plus import (HandshakingTaggingScheme,
                           TPLinkerPlusBiLSTM,
                           MetricsCalculator)
 import wandb
-import yaml
 from glove import Glove
 import numpy as np
+import config
 
 
-# In[ ]:
+# In[2]:
 
 
-try:
-    from yaml import CLoader as Loader, CDumper as Dumper
-except ImportError:
-    from yaml import Loader, Dumper
-config = yaml.load(open("train_config.yaml", "r"), Loader = yaml.FullLoader)
+config = config.train_config
+hyper_parameters = config["hyper_parameters"]
 
 
-# In[ ]:
+# In[3]:
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(config["device_num"])
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-# In[ ]:
-
-
-# hyperparameters
-hyper_parameters = config["hyper_parameters"]
-
-
-# In[ ]:
+# In[4]:
 
 
 # for reproductivity
@@ -66,7 +56,7 @@ torch.manual_seed(hyper_parameters["seed"]) # pytorch random seed
 torch.backends.cudnn.deterministic = True
 
 
-# In[ ]:
+# In[5]:
 
 
 data_home = config["data_home"]
@@ -76,7 +66,7 @@ valid_data_path = os.path.join(data_home, experiment_name, config["valid_data"])
 rel2id_path = os.path.join(data_home, experiment_name, config["rel2id"])
 
 
-# In[ ]:
+# In[6]:
 
 
 if config["logger"] == "wandb":
@@ -91,7 +81,7 @@ if config["logger"] == "wandb":
     model_state_dict_dir = wandb.run.dir
     logger = wandb
 else:
-    logger = DefaultLogger(config["log_path"], experiment_name, config["run_name"], hyper_parameters)
+    logger = DefaultLogger(config["log_path"], experiment_name, config["run_name"], config["run_id"], hyper_parameters)
     model_state_dict_dir = config["path_to_save_model"]
     if not os.path.exists(model_state_dict_dir):
         os.makedirs(model_state_dict_dir)
@@ -99,7 +89,7 @@ else:
 
 # # Load Data
 
-# In[ ]:
+# In[7]:
 
 
 train_data = json.load(open(train_data_path, "r", encoding = "utf-8"))
@@ -108,7 +98,7 @@ valid_data = json.load(open(valid_data_path, "r", encoding = "utf-8"))
 
 # # Split
 
-# In[ ]:
+# In[8]:
 
 
 # @specific
@@ -128,14 +118,14 @@ elif config["encoder"] in {"BiLSTM", }:
         return tok2char_span
 
 
-# In[ ]:
+# In[9]:
 
 
 preprocessor = Preprocessor(tokenize_func = tokenize, 
                             get_tok2char_span_map_func = get_tok2char_span_map)
 
 
-# In[ ]:
+# In[10]:
 
 
 # train and valid max token num
@@ -148,7 +138,7 @@ for sample in all_data:
 max_tok_num
 
 
-# In[ ]:
+# In[11]:
 
 
 if max_tok_num > hyper_parameters["max_seq_len"]:
@@ -164,7 +154,7 @@ if max_tok_num > hyper_parameters["max_seq_len"]:
                                                          )
 
 
-# In[ ]:
+# In[12]:
 
 
 print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
@@ -172,7 +162,7 @@ print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
 
 # # Tagger (Decoder)
 
-# In[ ]:
+# In[13]:
 
 
 max_seq_len = min(max_tok_num, hyper_parameters["max_seq_len"])
@@ -181,7 +171,7 @@ handshaking_tagger = HandshakingTaggingScheme(rel2id, max_seq_len)
 tag_size = handshaking_tagger.get_tag_size()
 
 
-# In[ ]:
+# In[14]:
 
 
 def sample_equal_to(sample1, sample2):
@@ -207,7 +197,7 @@ def sample_equal_to(sample1, sample2):
     return True
 
 
-# In[ ]:
+# In[15]:
 
 
 # # check tagging and decoding
@@ -245,7 +235,7 @@ def sample_equal_to(sample1, sample2):
 
 # # Dataset
 
-# In[ ]:
+# In[16]:
 
 
 if config["encoder"] == "BERT":
@@ -271,7 +261,7 @@ elif config["encoder"] in {"BiLSTM", }:
     data_maker = DataMaker4BiLSTM(text2indices, get_tok2char_span_map, handshaking_tagger)
 
 
-# In[ ]:
+# In[17]:
 
 
 class MyDataset(Dataset):
@@ -285,14 +275,14 @@ class MyDataset(Dataset):
         return len(self.data)
 
 
-# In[ ]:
+# In[18]:
 
 
 indexed_train_data = data_maker.get_indexed_data(train_data, max_seq_len)
 indexed_valid_data = data_maker.get_indexed_data(valid_data, max_seq_len)
 
 
-# In[ ]:
+# In[19]:
 
 
 train_dataloader = DataLoader(MyDataset(indexed_train_data), 
@@ -311,7 +301,7 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
                          )
 
 
-# In[ ]:
+# In[20]:
 
 
 # # have a look at dataloader
@@ -341,7 +331,7 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
 
 # # Model
 
-# In[ ]:
+# In[21]:
 
 
 if config["encoder"] == "BERT":
@@ -390,7 +380,7 @@ elif config["encoder"] in {"BiLSTM", }:
 rel_extractor = rel_extractor.to(device)
 
 
-# In[ ]:
+# In[22]:
 
 
 # # test outputs
@@ -407,7 +397,7 @@ rel_extractor = rel_extractor.to(device)
 
 # # Metrics
 
-# In[ ]:
+# In[23]:
 
 
 # loss func
@@ -428,7 +418,7 @@ def multilabel_categorical_crossentropy(y_pred, y_true):
 loss_func = multilabel_categorical_crossentropy
 
 
-# In[ ]:
+# In[24]:
 
 
 metrics = MetricsCalculator(handshaking_tagger)
@@ -436,7 +426,7 @@ metrics = MetricsCalculator(handshaking_tagger)
 
 # # Train
 
-# In[ ]:
+# In[25]:
 
 
 # train step
@@ -490,10 +480,10 @@ def valid_step(batch_valid_data):
         sample_list, batch_input_ids,         batch_attention_mask, batch_token_type_ids,         tok2char_span_list, batch_shaking_tag = batch_valid_data
         
         batch_input_ids,         batch_attention_mask,         batch_token_type_ids,         batch_shaking_tag = (batch_input_ids.to(device), 
-                                      batch_attention_mask.to(device), 
-                                      batch_token_type_ids.to(device), 
-                                      batch_shaking_tag.to(device)
-                                     )
+                              batch_attention_mask.to(device), 
+                              batch_token_type_ids.to(device), 
+                              batch_shaking_tag.to(device)
+                             )
         
     elif config["encoder"] in {"BiLSTM", }:
         sample_list, batch_input_ids,         tok2char_span_list, batch_shaking_tag = batch_valid_data
@@ -516,11 +506,12 @@ def valid_step(batch_valid_data):
     
     rel_cpg = metrics.get_rel_cpg(sample_list, 
                                   tok2char_span_list, 
-                                  pred_shaking_tag)
+                                  pred_shaking_tag,
+                                  hyper_parameters["match_pattern"])
     return sample_acc.item(), rel_cpg
 
 
-# In[ ]:
+# In[26]:
 
 
 max_f1 = 0.
@@ -625,7 +616,7 @@ def train_n_valid(train_dataloader, dev_dataloader, optimizer, scheduler, num_ep
         print("Current avf_f1: {}, Best f1: {}".format(valid_f1, max_f1))
 
 
-# In[ ]:
+# In[27]:
 
 
 # optimizer
@@ -633,7 +624,7 @@ init_learning_rate = float(hyper_parameters["lr"])
 optimizer = torch.optim.Adam(rel_extractor.parameters(), lr = init_learning_rate)
 
 
-# In[ ]:
+# In[28]:
 
 
 if hyper_parameters["scheduler"] == "CAWR":
@@ -650,7 +641,7 @@ elif hyper_parameters["scheduler"] == "ReduceLROnPlateau":
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, "min", verbose = True, patience = 6)
 
 
-# In[ ]:
+# In[29]:
 
 
 if not config["fr_scratch"]:
