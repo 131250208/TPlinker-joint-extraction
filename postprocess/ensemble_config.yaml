@@ -13,8 +13,8 @@ run_ids:
  
 last_k_res: 1
 
-keyword: test_data
+keyword: test_data # keyword for the filenames of test set.
 
-vote_threshold: 4
+vote_threshold: 4 # minimum vote number to save the results
 
 ensemble_res_dir: ../results/covid19_rel_lianxiangjia/ensemble
