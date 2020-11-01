@@ -17,7 +17,7 @@ The paper has been accepted to appear at **COLING 2020**. Note that the details 
   * [Evaluation](#evaluation)
 
 ## Update
-* 2020.11.01: Fixed bugs and added comments in BuildData.ipynb and build_data_config.yaml; TPLinkerPlus can support entity classification now, see [build data](#build-data) for the data format.
+* 2020.11.01: Fixed bugs and added comments in BuildData.ipynb and build_data_config.yaml; TPLinkerPlus can support entity classification now, see [build data](#build-data) for the data format; Updated the [datasets](#download-data) (added `entity_list` for TPLinkerPlus).
 
 ## Model
 <p align="center">
