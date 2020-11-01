@@ -5,13 +5,13 @@ common = {
     "exp_name": "nyt",
     "rel2id": "rel2id.json",
     "ent2id": "ent2id.json",
-    "device_num": 1,
+    "device_num": 0,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
         "shaking_type": "cln_plus",
         "inner_enc_type": "lstm",
-        "match_pattern": "whole_text", # only_head_text, whole_text, only_head_index, whole_span
+        "match_pattern": "whole_text", # only_head_text (nyt_star, webnlg_star), whole_text (nyt, webnlg), only_head_index, whole_span
     },
 }
 common["run_name"] = "{}+{}+{}".format("TP2", common["hyper_parameters"]["shaking_type"], common["encoder"]) + ""
