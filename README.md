@@ -21,11 +21,8 @@ The paper has been accepted to appear at **COLING 2020**. Note that the details 
 
 ## Model
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/7437595/95205135-8bf08d80-0817-11eb-80bb-8f559f072c8c.png" alt="framework" width="768"/>
+  <img src="https://user-images.githubusercontent.com/7437595/97800160-0d4c0c00-1c6e-11eb-960a-0574a6e1f6e9.png" alt="framework" width="768"/>
 </p>
-
-**The Framework of TPLinker. SH is short for subject head, OH is short for object head, ST is
-short for subject tail, and OT is short for object tail.**
 
 ## Results
 <p align="center">
@@ -70,7 +67,7 @@ Build data by `preprocess/BuildData.ipynb`.
 Set configuration in `preprocess/build_data_config.yaml`.
 In the configuration file, set `exp_name` corresponding to the directory name, set `ori_data_format` corresponding to the source project name of the data. 
 e.g. To build NYT*, set `exp_name` to `nyt_star` and set `ori_data_format` to `casrel`. See `build_data_config.yaml` for more details.
-If you want to run on other datasets, transform them into the normal format for TPLinker:
+If you want to run on other datasets, transform them into the normal format for TPLinker, then set `exp_name` to `<your folder name>` and set `ori_data_format` to `tplinker`:
 ```python
 [{
 "id": <text_id>,
