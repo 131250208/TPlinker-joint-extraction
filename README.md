@@ -60,7 +60,7 @@ Get raw NYT from [CopyRE](https://github.com/xiangrongzeng/copy_re),  rename raw
 
 Get WebNLG from [ETL-Span](https://github.com/yubowen-ph/JointER/tree/master/dataset/WebNLG/data), rename train.json and dev.json to train_data.json and valid_data.json and move them to `ori_data/webnlg`, rename test.json to test_data.json and put it under `ori_data/webnlg/test_data`.
 
-If you are bother to prepare data on your own, you could download our preprocessed [datasets](https://drive.google.com/file/d/1SsG3p-nxMGh9QInz-JcuM1avEw0YmaPu/view?usp=sharing).
+If you are bother to prepare data on your own, you could download our preprocessed [datasets](https://drive.google.com/file/d/1RxBVMSTgBxhGyhaPEWPdtdX1aOmrUPBZ/view?usp=sharing).
 
 #### build data
 Build data by `preprocess/BuildData.ipynb`.
