@@ -96,30 +96,47 @@ class Preprocessor:
                     "tok_offset": start_ind,
                     "char_offset": char_level_span[0],
                     }
-                if data_type == "test":
+                if data_type == "test": # test set
                     if len(sub_text) > 0:
                         split_sample_list.append(new_sample)
-                else:
+                else: # train or valid dataset, only save spo and entities in the subtext
                     sub_rel_list = []
                     for rel in sample["relation_list"]:
                         subj_tok_span = rel["subj_tok_span"]
                         obj_tok_span = rel["obj_tok_span"]
-                        # if subject and object are included this subtext, save this rel in new sample
+                        # if subject and object are both in this subtext, add this spo to new sample
                         if subj_tok_span[0] >= start_ind and subj_tok_span[1] <= end_ind \
                             and obj_tok_span[0] >= start_ind and obj_tok_span[1] <= end_ind: 
                             new_rel = copy.deepcopy(rel)
-                            new_rel["subj_tok_span"] = [subj_tok_span[0] - start_ind, subj_tok_span[1] - start_ind]
+                            new_rel["subj_tok_span"] = [subj_tok_span[0] - start_ind, subj_tok_span[1] - start_ind] # start_ind: tok level offset
                             new_rel["obj_tok_span"] = [obj_tok_span[0] - start_ind, obj_tok_span[1] - start_ind]
-                            new_rel["subj_char_span"][0] -= char_level_span[0]
+                            new_rel["subj_char_span"][0] -= char_level_span[0] # char level offset
                             new_rel["subj_char_span"][1] -= char_level_span[0]
                             new_rel["obj_char_span"][0] -= char_level_span[0]
                             new_rel["obj_char_span"][1] -= char_level_span[0]
                             sub_rel_list.append(new_rel)
+                    
+                    sub_ent_list = []
+                    for ent in sample["entity_list"]:
+                        tok_span = ent["tok_span"]
+                        # if entity in this subtext, add the entity to new sample
+                        if tok_span[0] >= start_ind and tok_span[1] <= end_ind: 
+                            new_ent = copy.deepcopy(ent)
+                            new_ent["tok_span"] = [tok_span[0] - start_ind, tok_span[1] - start_ind]
+                            
+                            new_ent["char_span"][0] -= char_level_span[0]
+                            new_ent["char_span"][1] -= char_level_span[0]
 
-                    if len(sub_rel_list) > 0:
-                        new_sample["relation_list"] = sub_rel_list
-                        split_sample_list.append(new_sample)
+                            sub_ent_list.append(new_ent)
+
+#                     if len(sub_rel_list) > 0:
+#                         new_sample["relation_list"] = sub_rel_list
+#                         split_sample_list.append(new_sample)
+                    new_sample["entity_list"] = sub_ent_list
+                    new_sample["relation_list"] = sub_rel_list
+                    split_sample_list.append(new_sample)
                 
+                # all segments covered, no need to continue
                 if end_ind > len(tokens):
                     break
                     
@@ -224,30 +241,30 @@ class Preprocessor:
                 tok_sp[1] = tok_ind + 1
         return char2tok_span
 
-    def _get_ent2char_spans(self, text, entities, ignore_subword = True):
+    def _get_ent2char_spans(self, text, entities, ignore_subword_match = True):
         '''
-        if ignore_subword, look for entities with whitespace around, e.g. "entity" -> " entity "
+        if ignore_subword_match is true, find entities with whitespace around, e.g. "entity" -> " entity "
         '''
         entities = sorted(entities, key = lambda x: len(x), reverse = True)
-        text_cp = " {} ".format(text) if ignore_subword else text
+        text_cp = " {} ".format(text) if ignore_subword_match else text
         ent2char_spans = {}
         for ent in entities:
             spans = []
-            target_ent = " {} ".format(ent) if ignore_subword else ent
+            target_ent = " {} ".format(ent) if ignore_subword_match else ent
             for m in re.finditer(re.escape(target_ent), text_cp):
-                span = [m.span()[0], m.span()[1] - 2] if ignore_subword else m.span()
+                span = [m.span()[0], m.span()[1] - 2] if ignore_subword_match else m.span()
                 spans.append(span)
 #             if len(spans) == 0:
 #                 set_trace()
             ent2char_spans[ent] = spans
         return ent2char_spans
     
-    def add_char_span(self, dataset, ignore_subword = True):
+    def add_char_span(self, dataset, ignore_subword_match = True):
         miss_sample_list = []
-        for sample in tqdm(dataset, desc = "Adding char level spans"):
+        for sample in tqdm(dataset, desc = "adding char level spans"):
             entities = [rel["subject"] for rel in sample["relation_list"]]
             entities.extend([rel["object"] for rel in sample["relation_list"]])
-            ent2char_spans = self._get_ent2char_spans(sample["text"], entities, ignore_subword = ignore_subword)
+            ent2char_spans = self._get_ent2char_spans(sample["text"], entities, ignore_subword_match = ignore_subword_match)
             
             new_relation_list = []
             for rel in sample["relation_list"]:
@@ -276,7 +293,7 @@ class Preprocessor:
             tok_span = [tok_span_list[0][0], tok_span_list[-1][1]]
             return tok_span
         
-        for sample in tqdm(dataset, desc = "Adding token level spans"):
+        for sample in tqdm(dataset, desc = "adding token level spans"):
             text = sample["text"]
             char2tok_span = self._get_char2tok_span(sample["text"])
             for rel in sample["relation_list"]:
@@ -284,4 +301,7 @@ class Preprocessor:
                 obj_char_span = rel["obj_char_span"]
                 rel["subj_tok_span"] = char_span2tok_span(subj_char_span, char2tok_span)
                 rel["obj_tok_span"] = char_span2tok_span(obj_char_span, char2tok_span)
+            for ent in sample["entity_list"]:
+                char_span = ent["char_span"]
+                ent["tok_span"] = char_span2tok_span(char_span, char2tok_span)
         return dataset

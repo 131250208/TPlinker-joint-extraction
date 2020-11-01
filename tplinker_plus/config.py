@@ -4,7 +4,8 @@ import random
 common = {
     "exp_name": "nyt",
     "rel2id": "rel2id.json",
-    "device_num": 0,
+    "ent2id": "ent2id.json",
+    "device_num": 1,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
@@ -20,13 +21,13 @@ train_config = {
     "train_data": "train_data.json",
     "valid_data": "valid_data.json",
     "rel2id": "rel2id.json",
-    "logger": "wandb", # if wandb, comment the following four lines
+#     "logger": "wandb", # if wandb, comment the following four lines
    
-#     # if logger is set as default, uncomment the following four lines
-#     "logger": "default", 
-#     "run_id": run_id,
-#     "log_path": "./default_log_dir/{}/default.log".format(run_id),
-#     "path_to_save_model": "./default_log_dir/{}".format(run_id),
+    # if logger is set as default, uncomment the following four lines and comment the line above
+    "logger": "default", 
+    "run_id": run_id,
+    "log_path": "./default_log_dir/{}/default.log".format(run_id),
+    "path_to_save_model": "./default_log_dir/{}".format(run_id),
 
     # when to save the model state dict
     "f1_2_save": 0,
@@ -44,14 +45,14 @@ train_config = {
         "max_seq_len": 100,
         "sliding_len": 20,
         "scheduler": "CAWR", # Step
-        "ghm": False, # set True if you want to use GHM to adjust the weights, this will speed up the training process and might improve the results.
-        "tok_pair_sample_rate": 1,
+        "ghm": False, # set True if you want to use GHM to adjust the weights of gradients, this will speed up the training process and might improve the results.
+        "tok_pair_sample_rate": 1, # (0, 1] How many percent of token paris you want to sample for training, this would slow down the training if set to less than 1. It is only helpful when your GPU memory is not enought for the training.
     },
 }
 
 eval_config = {
     "model_state_dict_dir": "./default_log_dir", # "./wandb"
-    "run_ids": ["DGKhEFlH", ],
+    "run_ids": ["l0Vmpb8H", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     
@@ -65,7 +66,7 @@ eval_config = {
     "hyper_parameters": {
         "batch_size": 32,
         "force_split": False,
-        "max_test_seq_len": 512,
+        "max_seq_len": 512,
         "sliding_len": 50,
     },
 }
