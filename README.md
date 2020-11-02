@@ -115,8 +115,10 @@ python train.py
 ### Evaluation
 Set configuration in `tplinker/config.py` as follows:
 ```python
-eval_config["run_ids"] = ["46qer3r9", ] # run id is recorded in training log
-eval_config["last_k_model"] = 1 # only use the last k models in these runs to output results
+
+eval_config["model_state_dict_dir"] = "./wandb" # if use wandb, set "./wandb"; if you use default logger, set "./default_log_dir" 
+eval_config["run_ids"] = ["46qer3r9", ] # run id is shown in the output and recorded in the log (see train_config["log_path"])
+eval_config["last_k_model"] = 1 # only use the last k models in to output results
 # Leave the rest as the same as the training
 ```
 Start evaluation by running `tplinker/Evaluation.ipynb`
