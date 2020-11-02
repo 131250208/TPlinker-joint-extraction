@@ -2,7 +2,7 @@ import string
 import random
 
 common = {
-    "exp_name": "ace2005_tp",
+    "exp_name": "nyt",
     "rel2id": "rel2id.json",
     "ent2id": "ent2id.json",
     "device_num": 0,
@@ -12,7 +12,7 @@ common = {
         "shaking_type": "cln_plus",
         "inner_enc_type": "lstm",
         # match_pattern: only_head_text (nyt_star, webnlg_star), whole_text (nyt, webnlg), only_head_index, whole_span, event_extraction
-        "match_pattern": "event_extraction", 
+        "match_pattern": "whole_text", 
     },
 }
 common["run_name"] = "{}+{}+{}".format("TP2", common["hyper_parameters"]["shaking_type"], common["encoder"]) + ""
@@ -33,20 +33,20 @@ train_config = {
     # when to save the model state dict
     "f1_2_save": 0,
     # whether train_config from scratch
-    "fr_scratch": False,
-    # note 
-    "note": "start from 3tg2jipm/model_state_dict_13.pt",
+    "fr_scratch": True,
+    # write down notes here if you want, it will be logged
+    "note": "start from scratch",
     # if not fr scratch, set a model_state_dict
-    "model_state_dict_path": "./wandb/run-20201101_092132-3tg2jipm/model_state_dict_13.pt",
+    "model_state_dict_path": "./wandb/run-20201101_092132-3tg2jipm/model_state_dict_13.pt", # valid only if "fr_scratch" is False
     "hyper_parameters": {
-        "batch_size": 32,
+        "batch_size": 24,
         "epochs": 100,
         "seed": 2333,
         "log_interval": 10,
         "max_seq_len": 100,
-        "sliding_len": 50,
+        "sliding_len": 20,
         "scheduler": "CAWR", # Step
-        "ghm": False, # set True if you want to use GHM to adjust the weights of gradients, this will speed up the training process and might improve the results.
+        "ghm": False, # set True if you want to use GHM to adjust the weights of gradients, this will speed up the training process and might improve the results. (Note that ghm in current version is unstable now, may hurt the results)
         "tok_pair_sample_rate": 1, # (0, 1] How many percent of token paris you want to sample for training, this would slow down the training if set to less than 1. It is only helpful when your GPU memory is not enought for the training.
     },
 }

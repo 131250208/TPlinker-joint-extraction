@@ -28,14 +28,14 @@ train_config = {
 #     # if logger is set as default, uncomment the following four lines
 #     "logger": "default", 
 #     "run_id": run_id,
-#     "log_path": "./default_log_dir/{}/default.log".format(run_id),
+#     "log_path": "./default_log_dir/default.log",
 #     "path_to_save_model": "./default_log_dir/{}".format(run_id),
 
-    # when to save the model state dict
-    "f1_2_save": 0,
+    # only save the model state dict if F1 score surpasses <f1_2_save>
+    "f1_2_save": 0, 
     # whether train_config from scratch
     "fr_scratch": True,
-    # note 
+    # write down notes here if you want, it will be logged 
     "note": "start from scratch",
     # if not fr scratch, set a model_state_dict
     "model_state_dict_path": "",
@@ -52,16 +52,16 @@ train_config = {
 }
 
 eval_config = {
-    "model_state_dict_dir": "./default_log_dir", # "./wandb"
+    "model_state_dict_dir": "./default_log_dir", # if use wandb, set "./wandb", or set "./default_log_dir" if you use default logger
     "run_ids": ["DGKhEFlH", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     
-    # results
+    # where to save results
     "save_res": False,
     "save_res_dir": "../results",
     
-    # score: set true only if test set is tagged
+    # score: set true only if test set is annotated with ground truth
     "score": True,
     
     "hyper_parameters": {
