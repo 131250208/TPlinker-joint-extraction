@@ -5,7 +5,7 @@
 TPLinker is a joint extraction model dealing with the issues of relation overlapping and nested entities, immune to the influence of exposure bias, and achieves SOTA performance on NYT (TPLinker: 91.9, TPlinkerPlus: **92.6 (+3.0)**) and WebNLG (TPLinker: 91.9, TPlinkerPlus: **92.3 (+0.5)**). This repository contains all the code of the official implementation for the paper: **TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking.** \[[PDF](https://arxiv.org/abs/2010.13415)\] 
 The paper has been accepted to appear at **COLING 2020**. Note that the details of TPLinkerPlus will be published in the extended paper, which is in progress.
 
-!!!I am looking for a Ph.D. position! My research insterests are NLP and knowledge graph. If you have any helpful info, please contact me! Thank you very much!
+**I am looking for a Ph.D. position!** My research insterests are NLP and knowledge graph. If you have any helpful info, please contact me! Thank you very much!
 
 - [Model](#model)
 - [Results](#results)
