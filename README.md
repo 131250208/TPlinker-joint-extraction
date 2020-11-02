@@ -16,13 +16,13 @@ The paper has been accepted to appear at **COLING 2020**. Note that the details 
   * [Train](#train)
   * [Evaluation](#evaluation)
 
+## Update
+* 2020.11.01: Fixed bugs and added comments in BuildData.ipynb and build_data_config.yaml; TPLinkerPlus can support entity classification now, see [build data](#build-data) for the data format; Updated the [datasets](#download-data) (added `entity_list` for TPLinkerPlus).
+
 ## Model
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/7437595/95205135-8bf08d80-0817-11eb-80bb-8f559f072c8c.png" alt="framework" width="768"/>
+  <img src="https://user-images.githubusercontent.com/7437595/97800160-0d4c0c00-1c6e-11eb-960a-0574a6e1f6e9.png" alt="framework" width="768"/>
 </p>
-
-**The Framework of TPLinker. SH is short for subject head, OH is short for object head, ST is
-short for subject tail, and OT is short for object tail.**
 
 ## Results
 <p align="center">
@@ -60,13 +60,32 @@ Get raw NYT from [CopyRE](https://github.com/xiangrongzeng/copy_re),  rename raw
 
 Get WebNLG from [ETL-Span](https://github.com/yubowen-ph/JointER/tree/master/dataset/WebNLG/data), rename train.json and dev.json to train_data.json and valid_data.json and move them to `ori_data/webnlg`, rename test.json to test_data.json and put it under `ori_data/webnlg/test_data`.
 
-If you are bother to prepare data on your own, you could download our preprocessed [datasets](https://drive.google.com/file/d/1SsG3p-nxMGh9QInz-JcuM1avEw0YmaPu/view?usp=sharing).
+If you are bother to prepare data on your own, you could download our preprocessed [datasets](https://drive.google.com/file/d/1RxBVMSTgBxhGyhaPEWPdtdX1aOmrUPBZ/view?usp=sharing).
 
 #### build data
 Build data by `preprocess/BuildData.ipynb`.
 Set configuration in `preprocess/build_data_config.yaml`.
-In the configuration file, set `exp_name` corresponding to the directory name, set `ori_data_format` corresponding to the source project name. 
+In the configuration file, set `exp_name` corresponding to the directory name, set `ori_data_format` corresponding to the source project name of the data. 
 e.g. To build NYT*, set `exp_name` to `nyt_star` and set `ori_data_format` to `casrel`. See `build_data_config.yaml` for more details.
+If you want to run on other datasets, transform them into the normal format for TPLinker, then set `exp_name` to `<your folder name>` and set `ori_data_format` to `tplinker`:
+```python
+[{
+"id": <text_id>,
+"text": <text>,
+"relation_list": [{
+    "subject": <subject>,
+    "subj_char_span": <character level span of the subject>, # e.g [3, 10] This key is optional. If no this key, set "add_char_span" to true in "build_data_config.yaml" when you build the data
+    "object": <object>,
+    "obj_char_span": <character level span of the object>, # optional
+    "predicate": <predicate>,
+ }],
+"entity_list": [{ # This key is optional, only for TPLinkerPlus. If no this key, BuildData.ipynb will auto genrate a entity list based on the relation list.
+    "text": <entity>,
+    "type": <entity_type>,
+    "char_span": <character level span of the object>, # This key relys on subj_char_span and obj_char_span in relation_list, if you do not have, set "add_char_span" to true in "build_data_config.yaml".
+ }],
+}]
+```
 
 ### Pretrained Model and Word Embeddings
 Download [BERT-BASE-CASED](https://huggingface.co/bert-base-cased) and put it under `../pretrained_models`. Pretrain word embeddings by `preprocess/Pretrain_Word_Embedding.ipynb` and put models under `../pretrained_emb`.
@@ -96,8 +115,10 @@ python train.py
 ### Evaluation
 Set configuration in `tplinker/config.py` as follows:
 ```python
-eval_config["run_ids"] = ["46qer3r9", ] # run id is recorded in training log
-eval_config["last_k_model"] = 1 # only use the last k models in these runs to output results
+
+eval_config["model_state_dict_dir"] = "./wandb" # if use wandb, set "./wandb"; if you use default logger, set "./default_log_dir" 
+eval_config["run_ids"] = ["46qer3r9", ] # run id is shown in the output and recorded in the log (see train_config["log_path"])
+eval_config["last_k_model"] = 1 # only use the last k models in to output results
 # Leave the rest as the same as the training
 ```
 Start evaluation by running `tplinker/Evaluation.ipynb`
