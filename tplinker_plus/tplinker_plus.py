@@ -10,6 +10,7 @@ from torch.nn.parameter import Parameter
 import torch.nn.functional as F
 import math
 from common.components import HandshakingKernel
+from collections import Counter
 
 class HandshakingTaggingScheme(object):
     def __init__(self, rel2id, max_seq_len, entity_type2id):
@@ -211,6 +212,75 @@ class HandshakingTaggingScheme(object):
                 ent["tok_span"] = [ent["tok_span"][0] + tok_offset, ent["tok_span"][1] + tok_offset]
                 
         return rel_list, ent_list
+    
+    def trans2ee(self, rel_list, ent_list):
+        sepatator = "_" # \u2E80
+        trigger_set, arg_iden_set, arg_class_set = set(), set(), set()
+        trigger_offset2vote = {}
+        trigger_offset2trigger_text = {}
+        trigger_offset2trigger_char_span = {}
+        # get candidate trigger types from relation
+        for rel in rel_list:
+            trigger_offset = rel["obj_tok_span"]
+            trigger_offset_str = "{},{}".format(trigger_offset[0], trigger_offset[1])
+            trigger_offset2trigger_text[trigger_offset_str] = rel["object"]
+            trigger_offset2trigger_char_span[trigger_offset_str] = rel["obj_char_span"]
+            _, event_type = rel["predicate"].split(sepatator)
+
+            if trigger_offset_str not in trigger_offset2vote:
+                trigger_offset2vote[trigger_offset_str] = {}
+            trigger_offset2vote[trigger_offset_str][event_type] = trigger_offset2vote[trigger_offset_str].get(event_type, 0) + 1
+            
+        # get candidate trigger types from entity types
+        for ent in ent_list:
+            t1, t2 = ent["type"].split(sepatator)
+            assert t1 == "Trigger" or t1 == "Argument"
+            if t1 == "Trigger": # trigger
+                event_type = t2
+                trigger_span = ent["tok_span"]
+                trigger_offset_str = "{},{}".format(trigger_span[0], trigger_span[1])
+                trigger_offset2trigger_text[trigger_offset_str] = ent["text"]
+                trigger_offset2trigger_char_span[trigger_offset_str] = ent["char_span"]
+                if trigger_offset_str not in trigger_offset2vote:
+                    trigger_offset2vote[trigger_offset_str] = {}
+                trigger_offset2vote[trigger_offset_str][event_type] = trigger_offset2vote[trigger_offset_str].get(event_type, 0) + 1.1 # if even, entity type makes the call
+
+        # voting
+        tirigger_offset2event = {}
+        for trigger_offet_str, event_type2score in trigger_offset2vote.items():
+            event_type = sorted(event_type2score.items(), key = lambda x: x[1], reverse = True)[0][0]
+            tirigger_offset2event[trigger_offet_str] = event_type # final event type
+
+        # generate event list
+        trigger_offset2arguments = {}
+        for rel in rel_list:
+            trigger_offset = rel["obj_tok_span"]
+            argument_role, event_type = rel["predicate"].split(sepatator)
+            trigger_offset_str = "{},{}".format(trigger_offset[0], trigger_offset[1])
+            if tirigger_offset2event[trigger_offset_str] != event_type: # filter false relations
+                continue
+
+            # append arguments
+            if trigger_offset_str not in trigger_offset2arguments:
+                trigger_offset2arguments[trigger_offset_str] = []
+            trigger_offset2arguments[trigger_offset_str].append({
+                "text": rel["subject"],
+                "type": argument_role,
+                "char_span": rel["subj_char_span"],
+                "tok_span": rel["subj_tok_span"],
+            })
+        event_list = []
+        for trigger_offset_str, event_type in tirigger_offset2event.items():
+            arguments = trigger_offset2arguments[trigger_offset_str] if trigger_offset_str in trigger_offset2arguments else []
+            event = {
+                "trigger": trigger_offset2trigger_text[trigger_offset_str],
+                "trigger_char_span": trigger_offset2trigger_char_span[trigger_offset_str],
+                "trigger_tok_span": trigger_offset_str.split(","),
+                "trigger_type": event_type,
+                "argument_list": arguments,
+            }
+            event_list.append(event)
+        return event_list
 
 class DataMaker4Bert():
     def __init__(self, tokenizer, shaking_tagger):
@@ -544,31 +614,118 @@ class MetricsCalculator():
 
         return sample_acc 
     
-    def get_pred_gold_sets(self, pred_rel_list, gold_rel_list, pred_ent_list, gold_ent_list, pattern = "only_head_text"):
-        if pattern == "only_head_index":
-            gold_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["predicate"], rel["obj_tok_span"][0]) for rel in gold_rel_list])
-            pred_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["predicate"], rel["obj_tok_span"][0]) for rel in pred_rel_list])
-            gold_ent_set = set(["{}\u2E80{}".format(ent["tok_span"][0], ent["type"]) for ent in gold_ent_list])
-            pred_ent_set = set(["{}\u2E80{}".format(ent["tok_span"][0], ent["type"]) for ent in pred_ent_list])
+    def get_mark_sets_event(self, event_list):
+        trigger_iden_set, trigger_class_set, arg_iden_set, arg_class_set = set(), set(), set(), set()
+        for event in event_list:
+            event_type = event["trigger_type"]
+            trigger_offset = event["trigger_tok_span"]
+            trigger_iden_set.add("{}\u2E80{}".format(trigger_offset[0], trigger_offset[1]))
+            trigger_class_set.add("{}\u2E80{}\u2E80{}".format(event_type, trigger_offset[0], trigger_offset[1]))
+            for arg in event["argument_list"]:
+                argument_offset = arg["tok_span"]
+                argument_role = arg["type"]
+                arg_iden_set.add("{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(event_type, trigger_offset[0], trigger_offset[1], argument_offset[0], argument_offset[1]))
+                arg_class_set.add("{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(event_type, trigger_offset[0], trigger_offset[1], argument_offset[0], argument_offset[1], argument_role))
                 
-        elif pattern == "whole_span":
-            gold_rel_set = set(["{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["subj_tok_span"][1], rel["predicate"], rel["obj_tok_span"][0], rel["obj_tok_span"][1]) for rel in gold_rel_list])
-            pred_rel_set = set(["{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["subj_tok_span"][1], rel["predicate"], rel["obj_tok_span"][0], rel["obj_tok_span"][1]) for rel in pred_rel_list])
-            gold_ent_set = set(["{}\u2E80{}\u2E80{}".format(ent["tok_span"][0], ent["tok_span"][1], ent["type"]) for ent in gold_ent_list])
-            pred_ent_set = set(["{}\u2E80{}\u2E80{}".format(ent["tok_span"][0], ent["tok_span"][1], ent["type"]) for ent in pred_ent_list])
+        return trigger_iden_set, \
+             trigger_class_set, \
+             arg_iden_set, \
+             arg_class_set
+    
+#     def get_mark_sets_rel(self, pred_rel_list, gold_rel_list, pred_ent_list, gold_ent_list, pattern = "only_head_text", gold_event_list = None):
+
+#         if pattern == "only_head_index":
+#             gold_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["predicate"], rel["obj_tok_span"][0]) for rel in gold_rel_list])
+#             pred_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["predicate"], rel["obj_tok_span"][0]) for rel in pred_rel_list])
+#             gold_ent_set = set(["{}\u2E80{}".format(ent["tok_span"][0], ent["type"]) for ent in gold_ent_list])
+#             pred_ent_set = set(["{}\u2E80{}".format(ent["tok_span"][0], ent["type"]) for ent in pred_ent_list])
+                
+#         elif pattern == "whole_span":
+#             gold_rel_set = set(["{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["subj_tok_span"][1], rel["predicate"], rel["obj_tok_span"][0], rel["obj_tok_span"][1]) for rel in gold_rel_list])
+#             pred_rel_set = set(["{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["subj_tok_span"][1], rel["predicate"], rel["obj_tok_span"][0], rel["obj_tok_span"][1]) for rel in pred_rel_list])
+#             gold_ent_set = set(["{}\u2E80{}\u2E80{}".format(ent["tok_span"][0], ent["tok_span"][1], ent["type"]) for ent in gold_ent_list])
+#             pred_ent_set = set(["{}\u2E80{}\u2E80{}".format(ent["tok_span"][0], ent["tok_span"][1], ent["type"]) for ent in pred_ent_list])
+
+#         elif pattern == "whole_text":
+#             gold_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in gold_rel_list])
+#             pred_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in pred_rel_list])
+#             gold_ent_set = set(["{}\u2E80{}".format(ent["text"], ent["type"]) for ent in gold_ent_list])
+#             pred_ent_set = set(["{}\u2E80{}".format(ent["text"], ent["type"]) for ent in pred_ent_list])
+
+#         elif pattern == "only_head_text":
+#             gold_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"].split(" ")[0], rel["predicate"], rel["object"].split(" ")[0]) for rel in gold_rel_list])
+#             pred_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"].split(" ")[0], rel["predicate"], rel["object"].split(" ")[0]) for rel in pred_rel_list])
+#             gold_ent_set = set(["{}\u2E80{}".format(ent["text"].split(" ")[0], ent["type"]) for ent in gold_ent_list])
+#             pred_ent_set = set(["{}\u2E80{}".format(ent["text"].split(" ")[0], ent["type"]) for ent in pred_ent_list])
+
+#         return pred_rel_set, gold_rel_set, pred_ent_set, gold_ent_set
+    
+    def get_mark_sets_rel(self, rel_list, ent_list, pattern = "only_head_text"):
+        if pattern == "only_head_index":
+            rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["predicate"], rel["obj_tok_span"][0]) for rel in rel_list])
+            ent_set = set(["{}\u2E80{}".format(ent["tok_span"][0], ent["type"]) for ent in ent_list])
+                
+        elif pattern == "whole_span": 
+            rel_set = set(["{}\u2E80{}\u2E80{}\u2E80{}\u2E80{}".format(rel["subj_tok_span"][0], rel["subj_tok_span"][1], rel["predicate"], rel["obj_tok_span"][0], rel["obj_tok_span"][1]) for rel in rel_list])
+            ent_set = set(["{}\u2E80{}\u2E80{}".format(ent["tok_span"][0], ent["tok_span"][1], ent["type"]) for ent in ent_list])
 
         elif pattern == "whole_text":
-            gold_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in gold_rel_list])
-            pred_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in pred_rel_list])
-            gold_ent_set = set(["{}\u2E80{}".format(ent["text"], ent["type"]) for ent in gold_ent_list])
-            pred_ent_set = set(["{}\u2E80{}".format(ent["text"], ent["type"]) for ent in pred_ent_list])
+            rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"], rel["predicate"], rel["object"]) for rel in rel_list])
+            ent_set = set(["{}\u2E80{}".format(ent["text"], ent["type"]) for ent in ent_list])
 
         elif pattern == "only_head_text":
-            gold_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"].split(" ")[0], rel["predicate"], rel["object"].split(" ")[0]) for rel in gold_rel_list])
-            pred_rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"].split(" ")[0], rel["predicate"], rel["object"].split(" ")[0]) for rel in pred_rel_list])
-            gold_ent_set = set(["{}\u2E80{}".format(ent["text"].split(" ")[0], ent["type"]) for ent in gold_ent_list])
-            pred_ent_set = set(["{}\u2E80{}".format(ent["text"].split(" ")[0], ent["type"]) for ent in pred_ent_list])
-        return pred_rel_set, gold_rel_set, pred_ent_set, gold_ent_set
+            rel_set = set(["{}\u2E80{}\u2E80{}".format(rel["subject"].split(" ")[0], rel["predicate"], rel["object"].split(" ")[0]) for rel in rel_list])
+            ent_set = set(["{}\u2E80{}".format(ent["text"].split(" ")[0], ent["type"]) for ent in ent_list])
+
+        return rel_set, ent_set
+    
+    def _cal_cpg(self, pred_set, gold_set, cpg):
+        '''
+        cpg is a list: [correct_num, pred_num, gold_num]
+        '''
+        for mark_str in pred_set:
+            if mark_str in gold_set:
+                cpg[0] += 1
+        cpg[1] += len(pred_set)
+        cpg[2] += len(gold_set)
+        
+    def cal_rel_cpg(self, pred_rel_list, pred_ent_list, gold_rel_list, gold_ent_list, ere_cpg_dict, pattern):
+        '''
+        ere_cpg_dict = {
+                "rel_cpg": [0, 0, 0],
+                "ent_cpg": [0, 0, 0],
+                }
+        pattern: metric pattern
+        '''
+        gold_rel_set, gold_ent_set = self.get_mark_sets_rel(gold_rel_list, gold_ent_list, pattern)
+        pred_rel_set, pred_ent_set = self.get_mark_sets_rel(pred_rel_list, pred_ent_list, pattern)
+
+        self._cal_cpg(pred_rel_set, gold_rel_set, ere_cpg_dict["rel_cpg"])
+        self._cal_cpg(pred_ent_set, gold_ent_set, ere_cpg_dict["ent_cpg"])
+    
+    def cal_event_cpg(self, pred_event_list, gold_event_list, ee_cpg_dict):
+        '''
+        ee_cpg_dict = {
+            "trigger_iden_cpg": [0, 0, 0],
+            "trigger_class_cpg": [0, 0, 0],
+            "arg_iden_cpg": [0, 0, 0],
+            "arg_class_cpg": [0, 0, 0],
+        }
+        '''
+        pred_trigger_iden_set, \
+        pred_trigger_class_set, \
+        pred_arg_iden_set, \
+        pred_arg_class_set = self.get_mark_sets_event(pred_event_list)
+
+        gold_trigger_iden_set, \
+        gold_trigger_class_set, \
+        gold_arg_iden_set, \
+        gold_arg_class_set = self.get_mark_sets_event(gold_event_list)
+
+        self._cal_cpg(pred_trigger_iden_set, gold_trigger_iden_set, ee_cpg_dict["trigger_iden_cpg"])
+        self._cal_cpg(pred_trigger_class_set, gold_trigger_class_set, ee_cpg_dict["trigger_class_cpg"])
+        self._cal_cpg(pred_arg_iden_set, gold_arg_iden_set, ee_cpg_dict["arg_iden_cpg"])
+        self._cal_cpg(pred_arg_class_set, gold_arg_class_set, ee_cpg_dict["arg_class_cpg"])
     
     def get_cpg(self, sample_list, 
                    tok2char_span_list, 
@@ -577,8 +734,19 @@ class MetricsCalculator():
         '''
         return correct number, predict number, gold number (cpg)
         '''
-        correct_num, pred_num, gold_num = 0, 0, 0
-        ent_correct_num, ent_pred_num, ent_gold_num = 0, 0, 0
+        
+        ee_cpg_dict = {
+                "trigger_iden_cpg": [0, 0, 0],
+                "trigger_class_cpg": [0, 0, 0],
+                "arg_iden_cpg": [0, 0, 0],
+                "arg_class_cpg": [0, 0, 0],
+                }
+        ere_cpg_dict = {
+                "rel_cpg": [0, 0, 0],
+                "ent_cpg": [0, 0, 0],
+                }
+        
+        # go through all sentences
         for ind in range(len(sample_list)):
             sample = sample_list[ind]
             text = sample["text"]
@@ -587,32 +755,21 @@ class MetricsCalculator():
 
             pred_rel_list, pred_ent_list = self.shaking_tagger.decode_rel(text, 
                                         pred_shaking_tag, 
-                                        tok2char_span)
+                                        tok2char_span) # decoding
             gold_rel_list = sample["relation_list"]
             gold_ent_list = sample["entity_list"]
-            
-            pred_rel_set, gold_rel_set, pred_ent_set, gold_ent_set = self.get_pred_gold_sets(pred_rel_list, 
-                                                                     gold_rel_list, 
-                                                                     pred_ent_list, 
-                                                                     gold_ent_list, 
-                                                                     pattern)
-            # rel cpg
-            for rel_str in pred_rel_set:
-                if rel_str in gold_rel_set:
-                    correct_num += 1
+                
+            if pattern == "event_extraction":
+                pred_event_list = self.shaking_tagger.trans2ee(pred_rel_list, pred_ent_list) # transform to event list
+                gold_event_list = sample["event_list"]
+                self.cal_event_cpg(pred_event_list, gold_event_list, ee_cpg_dict)
+            else:
+                self.cal_rel_cpg(pred_rel_list, pred_ent_list, gold_rel_list, gold_ent_list, ere_cpg_dict, pattern)
 
-            pred_num += len(pred_rel_set)
-            gold_num += len(gold_rel_set)
-            
-            # ent cpg
-            for ent_str in pred_ent_set:
-                if ent_str in gold_ent_set:
-                    ent_correct_num += 1
-
-            ent_pred_num += len(pred_ent_set)
-            ent_gold_num += len(gold_ent_set)
-        
-        return (correct_num, pred_num, gold_num), (ent_correct_num, ent_pred_num, ent_gold_num)
+        if pattern == "event_extraction":
+            return ee_cpg_dict
+        else:
+            return ere_cpg_dict
         
     def get_prf_scores(self, correct_num, pred_num, gold_num):
         minimini = 1e-12

@@ -2,7 +2,7 @@ import string
 import random
 
 common = {
-    "exp_name": "nyt",
+    "exp_name": "ace2005_tp",
     "rel2id": "rel2id.json",
     "ent2id": "ent2id.json",
     "device_num": 0,
@@ -11,7 +11,8 @@ common = {
     "hyper_parameters": {
         "shaking_type": "cln_plus",
         "inner_enc_type": "lstm",
-        "match_pattern": "whole_text", # only_head_text (nyt_star, webnlg_star), whole_text (nyt, webnlg), only_head_index, whole_span
+        # match_pattern: only_head_text (nyt_star, webnlg_star), whole_text (nyt, webnlg), only_head_index, whole_span, event_extraction
+        "match_pattern": "event_extraction", 
     },
 }
 common["run_name"] = "{}+{}+{}".format("TP2", common["hyper_parameters"]["shaking_type"], common["encoder"]) + ""
@@ -21,29 +22,29 @@ train_config = {
     "train_data": "train_data.json",
     "valid_data": "valid_data.json",
     "rel2id": "rel2id.json",
-#     "logger": "wandb", # if wandb, comment the following four lines
+    "logger": "wandb", # if wandb, comment the following four lines
    
-    # if logger is set as default, uncomment the following four lines and comment the line above
-    "logger": "default", 
-    "run_id": run_id,
-    "log_path": "./default_log_dir/{}/default.log".format(run_id),
-    "path_to_save_model": "./default_log_dir/{}".format(run_id),
+#     # if logger is set as default, uncomment the following four lines and comment the line above
+#     "logger": "default", 
+#     "run_id": run_id,
+#     "log_path": "./default_log_dir/default.log",
+#     "path_to_save_model": "./default_log_dir/{}".format(run_id),
 
     # when to save the model state dict
     "f1_2_save": 0,
     # whether train_config from scratch
-    "fr_scratch": True,
+    "fr_scratch": False,
     # note 
-    "note": "start from scratch",
+    "note": "start from 3tg2jipm/model_state_dict_13.pt",
     # if not fr scratch, set a model_state_dict
-    "model_state_dict_path": "",
+    "model_state_dict_path": "./wandb/run-20201101_092132-3tg2jipm/model_state_dict_13.pt",
     "hyper_parameters": {
-        "batch_size": 24,
+        "batch_size": 32,
         "epochs": 100,
         "seed": 2333,
         "log_interval": 10,
         "max_seq_len": 100,
-        "sliding_len": 20,
+        "sliding_len": 50,
         "scheduler": "CAWR", # Step
         "ghm": False, # set True if you want to use GHM to adjust the weights of gradients, this will speed up the training process and might improve the results.
         "tok_pair_sample_rate": 1, # (0, 1] How many percent of token paris you want to sample for training, this would slow down the training if set to less than 1. It is only helpful when your GPU memory is not enought for the training.
@@ -51,8 +52,8 @@ train_config = {
 }
 
 eval_config = {
-    "model_state_dict_dir": "./default_log_dir", # "./wandb"
-    "run_ids": ["l0Vmpb8H", ],
+    "model_state_dict_dir": "./wandb", # if use wandb, set "./wandb", or set "./default_log_dir" if you use default logger
+    "run_ids": ["3tg2jipm", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     

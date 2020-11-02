@@ -162,6 +162,16 @@ if max_tok_num > hyper_parameters["max_seq_len"]:
 print("train: {}".format(len(train_data)), "valid: {}".format(len(valid_data)))
 
 
+# In[ ]:
+
+
+# count_neg = 0 # 74.8% are neg samples 0.7485367594575303
+# for example in train_data + valid_data:
+#     if len(example["relation_list"]) == 0 and len(example["entity_list"]) == 0:
+#         count_neg += 1
+# print(count_neg/len(indexed_train_data + indexed_valid_data))
+
+
 # # Tagger (Decoder)
 
 # In[ ]:
@@ -484,11 +494,11 @@ def valid_step(batch_valid_data):
     sample_acc = metrics.get_sample_accuracy(pred_shaking_tag,
                                              batch_shaking_tag)
     
-    rel_cpg, ent_cpg = metrics.get_cpg(sample_list, 
+    cpg_dict = metrics.get_cpg(sample_list, 
                                           tok2char_span_list, 
                                           pred_shaking_tag,
                                           hyper_parameters["match_pattern"])
-    return sample_acc.item(), rel_cpg, ent_cpg
+    return sample_acc.item(), cpg_dict
 
 
 # In[ ]:
@@ -555,40 +565,77 @@ def train_n_valid(train_dataloader, dev_dataloader, optimizer, scheduler, num_ep
         
         t_ep = time.time()
         total_sample_acc = 0.
-        total_rel_correct_num, total_rel_pred_num, total_rel_gold_num = 0, 0, 0
-        total_ent_correct_num, total_ent_pred_num, total_ent_gold_num = 0, 0, 0
+#         total_rel_correct_num, total_rel_pred_num, total_rel_gold_num = 0, 0, 0
+#         total_ent_correct_num, total_ent_pred_num, total_ent_gold_num = 0, 0, 0
+        total_cpg_dict = {}
         for batch_ind, batch_valid_data in enumerate(tqdm(dataloader, desc = "Validating")):
-            sample_acc, rel_cpg, ent_cpg = valid_step(batch_valid_data)
-
+            sample_acc, cpg_dict = valid_step(batch_valid_data)
             total_sample_acc += sample_acc
-           
-            total_rel_correct_num += rel_cpg[0]
-            total_rel_pred_num += rel_cpg[1]
-            total_rel_gold_num += rel_cpg[2]
             
-            total_ent_correct_num += ent_cpg[0]
-            total_ent_pred_num += ent_cpg[1]
-            total_ent_gold_num += ent_cpg[2]
+            # init total_cpg_dict
+            for k in cpg_dict.keys():
+                if k not in total_cpg_dict:
+                    total_cpg_dict[k] = [0, 0, 0]
+           
+            for k, cpg in cpg_dict.items():
+                for idx, n in enumerate(cpg):
+                    total_cpg_dict[k][idx] += cpg[idx]
+                    
+#             total_rel_correct_num += rel_cpg[0]
+#             total_rel_pred_num += rel_cpg[1]
+#             total_rel_gold_num += rel_cpg[2]
+            
+#             total_ent_correct_num += ent_cpg[0]
+#             total_ent_pred_num += ent_cpg[1]
+#             total_ent_gold_num += ent_cpg[2]
 
         avg_sample_acc = total_sample_acc / len(dataloader)
         
-        rel_prf = metrics.get_prf_scores(total_rel_correct_num, total_rel_pred_num, total_rel_gold_num)
-        ent_prf = metrics.get_prf_scores(total_ent_correct_num, total_ent_pred_num, total_ent_gold_num)
-        
-        log_dict = {
-                        "val_shaking_tag_acc": avg_sample_acc,
-                        "val_rel_prec": rel_prf[0],
-                        "val_rel_recall": rel_prf[1],
-                        "val_rel_f1": rel_prf[2],
-                        "val_ent_prec": ent_prf[0],
-                        "val_ent_recall": ent_prf[1],
-                        "val_ent_f1": ent_prf[2],
-                        "time": time.time() - t_ep,
-                    }
+        if "rel_cpg" in total_cpg_dict:
+            rel_prf = metrics.get_prf_scores(total_cpg_dict["rel_cpg"][0], total_cpg_dict["rel_cpg"][1], total_cpg_dict["rel_cpg"][2])
+            ent_prf = metrics.get_prf_scores(total_cpg_dict["ent_cpg"][0], total_cpg_dict["ent_cpg"][1], total_cpg_dict["ent_cpg"][2])
+            final_score = rel_prf[2]
+            log_dict = {
+                            "val_shaking_tag_acc": avg_sample_acc,
+                            "val_rel_prec": rel_prf[0],
+                            "val_rel_recall": rel_prf[1],
+                            "val_rel_f1": rel_prf[2],
+                            "val_ent_prec": ent_prf[0],
+                            "val_ent_recall": ent_prf[1],
+                            "val_ent_f1": ent_prf[2],
+                            "time": time.time() - t_ep,
+                        }
+        elif "trigger_iden_cpg" in total_cpg_dict:
+            trigger_iden_prf = metrics.get_prf_scores(total_cpg_dict["trigger_iden_cpg"][0], 
+                                                      total_cpg_dict["trigger_iden_cpg"][1], 
+                                                      total_cpg_dict["trigger_iden_cpg"][2])
+            trigger_class_prf = metrics.get_prf_scores(total_cpg_dict["trigger_class_cpg"][0], 
+                                                      total_cpg_dict["trigger_class_cpg"][1], 
+                                                      total_cpg_dict["trigger_class_cpg"][2])
+            arg_iden_prf = metrics.get_prf_scores(total_cpg_dict["arg_iden_cpg"][0], total_cpg_dict["arg_iden_cpg"][1], total_cpg_dict["arg_iden_cpg"][2])
+            arg_class_prf = metrics.get_prf_scores(total_cpg_dict["arg_class_cpg"][0], total_cpg_dict["arg_class_cpg"][1], total_cpg_dict["arg_class_cpg"][2])
+            final_score = arg_class_prf[2]
+            log_dict = {
+                            "val_shaking_tag_acc": avg_sample_acc,
+                            "val_trigger_iden_prec": trigger_iden_prf[0],
+                            "val_trigger_iden_recall": trigger_iden_prf[1],
+                            "val_trigger_iden_f1": trigger_iden_prf[2],
+                            "val_trigger_class_prec": trigger_class_prf[0],
+                            "val_trigger_class_recall": trigger_class_prf[1],
+                            "val_trigger_class_f1": trigger_class_prf[2],
+                            "val_arg_iden_prec": arg_iden_prf[0],
+                            "val_arg_iden_recall": arg_iden_prf[1],
+                            "val_arg_iden_f1": arg_iden_prf[2],
+                            "val_arg_class_prec": arg_class_prf[0],
+                            "val_arg_class_recall": arg_class_prf[1],
+                            "val_arg_class_f1": arg_class_prf[2],
+                            "time": time.time() - t_ep,
+                        }
+            
         logger.log(log_dict)
         pprint(log_dict)
         
-        return rel_prf[2]
+        return final_score
         
     for ep in range(num_epoch):
         train(train_dataloader, ep)   

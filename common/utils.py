@@ -11,12 +11,14 @@ class DefaultLogger:
         log_dir = "/".join(self.log_path.split("/")[:-1])
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-            
+        self.run_id = run_id
+        self.log("============================================================================")
         self.log("project: {}, run_name: {}, run_id: {}\n".format(project, run_name, run_id))
         hyperparameters_format = "--------------hypter_parameters------------------- \n{}\n-----------------------------------------"
         self.log(hyperparameters_format.format(json.dumps(hyperparameter, indent = 4)))
 
     def log(self, text):
+        text = "run_id: {}, {}".format(self.run_id, text)
         print(text)
         open(self.log_path, "a", encoding = "utf-8").write("{}\n".format(text))
         
@@ -100,6 +102,7 @@ class Preprocessor:
                     if len(sub_text) > 0:
                         split_sample_list.append(new_sample)
                 else: # train or valid dataset, only save spo and entities in the subtext
+                    # spo
                     sub_rel_list = []
                     for rel in sample["relation_list"]:
                         subj_tok_span = rel["subj_tok_span"]
@@ -116,6 +119,7 @@ class Preprocessor:
                             new_rel["obj_char_span"][1] -= char_level_span[0]
                             sub_rel_list.append(new_rel)
                     
+                    # entity
                     sub_ent_list = []
                     for ent in sample["entity_list"]:
                         tok_span = ent["tok_span"]
@@ -128,12 +132,25 @@ class Preprocessor:
                             new_ent["char_span"][1] -= char_level_span[0]
 
                             sub_ent_list.append(new_ent)
-
-#                     if len(sub_rel_list) > 0:
-#                         new_sample["relation_list"] = sub_rel_list
-#                         split_sample_list.append(new_sample)
-                    new_sample["entity_list"] = sub_ent_list
-                    new_sample["relation_list"] = sub_rel_list
+                    
+                    # event
+                    if "event_list" in sample:
+                        sub_event_list = []
+                        for event in sample["event_list"]:
+                            trigger_tok_span = event["trigger_tok_span"]
+                            if trigger_tok_span[1] > end_ind or trigger_tok_span[0] < start_ind:
+                                continue
+                            new_event = copy.deepcopy(event)
+                            new_arg_list = []
+                            for arg in new_event["argument_list"]:
+                                if arg["tok_span"][0] >= start_ind and arg["tok_span"][1] <= end_ind:
+                                    new_arg_list.append(arg)
+                            new_event["argument_list"] = new_arg_list
+                            sub_event_list.append(new_event)
+                        new_sample["event_list"] = sub_event_list # maybe empty
+                        
+                    new_sample["entity_list"] = sub_ent_list # maybe empty
+                    new_sample["relation_list"] = sub_rel_list # maybe empty
                     split_sample_list.append(new_sample)
                 
                 # all segments covered, no need to continue
@@ -304,4 +321,9 @@ class Preprocessor:
             for ent in sample["entity_list"]:
                 char_span = ent["char_span"]
                 ent["tok_span"] = char_span2tok_span(char_span, char2tok_span)
+            if "event_list" in sample:
+                for event in sample["event_list"]:
+                    event["trigger_tok_span"] = char_span2tok_span(event["trigger_char_span"], char2tok_span)
+                    for arg in event["argument_list"]:
+                        arg["tok_span"] = char_span2tok_span(arg["char_span"], char2tok_span)
         return dataset
