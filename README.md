@@ -2,7 +2,7 @@
 
 **TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking**
 
-This repository contains all the code of the official implementation for the paper: **[TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking](https://arxiv.org/abs/2010.13415).** The paper has been accepted to appear at **COLING 2020**.
+This repository contains all the code of the official implementation for the paper: **[TPLinker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking](https://arxiv.org/abs/2010.13415).** The paper has been accepted to appear at **COLING 2020**. \[[slides](https://drive.google.com/file/d/1UAIVkuUgs122k02Ijln-AtaX2mHz70N-/view?usp=sharing)\] \[[poster](https://drive.google.com/file/d/1iwFfXZDjwEz1kBK8z1To_YBWhfyswzYU/view?usp=sharing)\]
 
 TPLinker is a joint extraction model resolved the issues of **relation overlapping** and **nested entities**, immune to the influence of **exposure bias**, and achieves SOTA performance on NYT (TPLinker: **91.9**, TPlinkerPlus: **92.6 (+3.0)**) and WebNLG (TPLinker: **91.9**, TPlinkerPlus: **92.3 (+0.5)**).  Note that the details of TPLinkerPlus will be published in the extended paper, which is still in progress.
 
