@@ -269,6 +269,9 @@ class Preprocessor:
             spans = []
             target_ent = " {} ".format(ent) if ignore_subword_match else ent
             for m in re.finditer(re.escape(target_ent), text_cp):
+                if not ignore_subword_match and re.match("\d+", target_ent): # avoid matching a inner number of a number
+                    if (m.span()[0] - 1 >= 0 and re.match("\d", text_cp[m.span()[0] - 1])) or (m.span()[1] < len(text_cp) and re.match("\d", text_cp[m.span()[1]])):
+                        continue
                 span = [m.span()[0], m.span()[1] - 2] if ignore_subword_match else m.span()
                 spans.append(span)
 #             if len(spans) == 0:
@@ -281,14 +284,16 @@ class Preprocessor:
         for sample in tqdm(dataset, desc = "adding char level spans"):
             entities = [rel["subject"] for rel in sample["relation_list"]]
             entities.extend([rel["object"] for rel in sample["relation_list"]])
+            if "entity_list" in sample:
+                entities.extend([ent["text"] for ent in sample["entity_list"]])
             ent2char_spans = self._get_ent2char_spans(sample["text"], entities, ignore_subword_match = ignore_subword_match)
             
             new_relation_list = []
             for rel in sample["relation_list"]:
-                subj_tok_spans = ent2char_spans[rel["subject"]]
-                obj_tok_spans = ent2char_spans[rel["object"]]
-                for subj_sp in subj_tok_spans:
-                    for obj_sp in obj_tok_spans:
+                subj_char_spans = ent2char_spans[rel["subject"]]
+                obj_char_spans = ent2char_spans[rel["object"]]
+                for subj_sp in subj_char_spans:
+                    for obj_sp in obj_char_spans:
                         new_relation_list.append({
                             "subject": rel["subject"],
                             "object": rel["object"],
@@ -296,9 +301,21 @@ class Preprocessor:
                             "obj_char_span": obj_sp,
                             "predicate": rel["predicate"],
                         })
+            
             if len(sample["relation_list"]) > len(new_relation_list):
                 miss_sample_list.append(sample)
             sample["relation_list"] = new_relation_list
+            
+            if "entity_list" in sample:
+                new_ent_list = []
+                for ent in sample["entity_list"]:
+                    for char_sp in ent2char_spans[ent["text"]]:
+                        new_ent_list.append({
+                            "text": ent["text"],
+                            "type": ent["type"],
+                            "char_span": char_sp,
+                        })
+                sample["entity_list"] = new_ent_list
         return dataset, miss_sample_list
            
     def add_tok_span(self, dataset):

@@ -11,7 +11,7 @@ import re
 from IPython.core.debugger import set_trace
 from pprint import pprint
 import unicodedata
-from transformers import AutoModel, BertTokenizerFast
+from transformers import BertModel, BertTokenizerFast
 import copy
 import torch
 import torch.nn as nn
@@ -348,7 +348,7 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
 
 
 if config["encoder"] == "BERT":
-    encoder = AutoModel.from_pretrained(config["bert_path"])
+    encoder = BertModel.from_pretrained(config["bert_path"])
     hidden_size = encoder.config.hidden_size
     
     rel_extractor = TPLinkerPlusBert(encoder, 

@@ -258,6 +258,7 @@ class HandshakingTaggingScheme(object):
             argument_role, event_type = rel["predicate"].split(sepatator)
             trigger_offset_str = "{},{}".format(trigger_offset[0], trigger_offset[1])
             if tirigger_offset2event[trigger_offset_str] != event_type: # filter false relations
+#                 set_trace()
                 continue
 
             # append arguments

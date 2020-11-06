@@ -2,11 +2,11 @@
 wandb/
 *model*/
 *.json
-*.yaml
+# *.yaml
 *.pt
 *.emb
 CasRel/
-config.py
+# config.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

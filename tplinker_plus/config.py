@@ -2,10 +2,10 @@ import string
 import random
 
 common = {
-    "exp_name": "nyt",
+    "exp_name": "duie2", # ace05_lu
     "rel2id": "rel2id.json",
     "ent2id": "ent2id.json",
-    "device_num": 0,
+    "device_num": 1,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
@@ -37,13 +37,13 @@ train_config = {
     # write down notes here if you want, it will be logged
     "note": "start from scratch",
     # if not fr scratch, set a model_state_dict
-    "model_state_dict_path": "./wandb/run-20201101_092132-3tg2jipm/model_state_dict_13.pt", # valid only if "fr_scratch" is False
+    "model_state_dict_path": "", # valid only if "fr_scratch" is False
     "hyper_parameters": {
-        "batch_size": 24,
+        "batch_size": 32,
         "epochs": 100,
         "seed": 2333,
         "log_interval": 10,
-        "max_seq_len": 100,
+        "max_seq_len": 128,
         "sliding_len": 20,
         "scheduler": "CAWR", # Step
         "ghm": False, # set True if you want to use GHM to adjust the weights of gradients, this will speed up the training process and might improve the results. (Note that ghm in current version is unstable now, may hurt the results)
@@ -53,7 +53,7 @@ train_config = {
 
 eval_config = {
     "model_state_dict_dir": "./wandb", # if use wandb, set "./wandb", or set "./default_log_dir" if you use default logger
-    "run_ids": ["3tg2jipm", ],
+    "run_ids": ["1a70p109", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     
@@ -74,7 +74,7 @@ eval_config = {
 
 bert_config = {
     "data_home": "../data4bert",
-    "bert_path": "../../pretrained_models/bert-base-cased",
+    "bert_path": "../../pretrained_models/chinese-bert-wwm-ext-hit", # bert-base-cased， chinese-bert-wwm-ext-hit
     "hyper_parameters": {
         "lr": 5e-5,
     },
