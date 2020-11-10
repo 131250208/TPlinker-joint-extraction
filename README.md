@@ -140,7 +140,7 @@ sliding_len: 20
 tok_pair_sample_rate: 1
 
 # WebNLG*/WebNLG
-# The best F1: 0.934/0.889 (on validation set), 0.923/0.886 (on test set)
+# The best F1: 0.934/0.889 (on validation set), 0.923/0.882 (on test set)
 T_mult: 1 
 batch_size: 6 
 epochs: 250
