@@ -17,6 +17,7 @@ TPLinker is a joint extraction model resolved the issues of **relation overlappi
     + [build data](#build-data)
   * [Pretrained Model and Word Embeddings](#pretrained-model-and-word-embeddings)
   * [Train](#train)
+    + [super parameters](#super-parameters)
   * [Evaluation](#evaluation)
 
 ## Update
@@ -116,7 +117,7 @@ cd tplinker
 python train.py
 ```
 
-### Super-parameters
+#### super parameters
 **TPLinker**
 ```
 Just follow the paper
