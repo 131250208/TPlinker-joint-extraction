@@ -115,6 +115,46 @@ Start training
 cd tplinker
 python train.py
 ```
+
+### Super-parameters
+**TPLinker**
+```
+Just follow the paper
+```
+**TPLinkerPlus**
+```
+# NYT*/NYT
+# The best F1: 0.931/0.934 (on validation set), 0.926/0.926 (on test set)
+T_mult: 1
+batch_size: 24
+epochs: 250
+log_interval: 10
+lr: 0.00001
+max_seq_len: 100
+rewarm_epoch_num: 2
+scheduler: CAWR
+seed: 2333
+shaking_type: cln
+sliding_len: 20
+tok_pair_sample_rate: 1
+
+# WebNLG*/WebNLG
+# The best F1: 0.934/0.889 (on validation set), 0.923/0.886 (on test set)
+T_mult: 1 
+batch_size: 6 
+epochs: 250
+log_interval: 10
+lr: 0.00001
+max_seq_len: 100
+rewarm_epoch_num: 2
+scheduler: CAWR
+seed: 2333
+shaking_type: cln
+sliding_len: 20
+tok_pair_sample_rate: 1
+```
+**Note: Adjusting the learning rate and add epochs may help achieve better performance. It would be helpful to change scheduler, cause it is slow to converge by CAWR. If you get a better performance, it would be very nice of you to share the super parameters by an issue!**
+
 ### Evaluation
 Set configuration in `tplinker/config.py` as follows:
 ```python
