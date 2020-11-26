@@ -354,7 +354,6 @@ if config["encoder"] == "BERT":
     rel_extractor = TPLinkerPlusBert(encoder, 
                                      tag_size,
                                      hyper_parameters["shaking_type"],
-                                     hyper_parameters["inner_enc_type"],
                                      hyper_parameters["tok_pair_sample_rate"]
                                     )
     
@@ -383,7 +382,6 @@ elif config["encoder"] in {"BiLSTM", }:
                                        hyper_parameters["rnn_dropout"],
                                        tag_size, 
                                        hyper_parameters["shaking_type"],
-                                       hyper_parameters["inner_enc_type"],
                                        hyper_parameters["tok_pair_sample_rate"],
                                       )
 
@@ -580,14 +578,6 @@ def train_n_valid(train_dataloader, dev_dataloader, optimizer, scheduler, num_ep
             for k, cpg in cpg_dict.items():
                 for idx, n in enumerate(cpg):
                     total_cpg_dict[k][idx] += cpg[idx]
-                    
-#             total_rel_correct_num += rel_cpg[0]
-#             total_rel_pred_num += rel_cpg[1]
-#             total_rel_gold_num += rel_cpg[2]
-            
-#             total_ent_correct_num += ent_cpg[0]
-#             total_ent_pred_num += ent_cpg[1]
-#             total_ent_gold_num += ent_cpg[2]
 
         avg_sample_acc = total_sample_acc / len(dataloader)
         

@@ -51,6 +51,7 @@ hyper_parameters = config["hyper_parameters"]
 
 # In[ ]:
 
+
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 os.environ["CUDA_VISIBLE_DEVICES"] = str(config["device_num"])
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -277,11 +278,9 @@ valid_dataloader = DataLoader(MyDataset(indexed_valid_data),
 if config["encoder"] == "BERT":
     encoder = AutoModel.from_pretrained(config["bert_path"])
     hidden_size = encoder.config.hidden_size
-    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hidden_size]).to(device)
     rel_extractor = TPLinkerBert(encoder, 
                                  len(rel2id), 
                                  hyper_parameters["shaking_type"],
-                                 hyper_parameters["inner_enc_type"],
                                  hyper_parameters["dist_emb_size"],
                                  hyper_parameters["ent_add_dist"],
                                  hyper_parameters["rel_add_dist"],
@@ -305,7 +304,6 @@ elif config["encoder"] in {"BiLSTM", }:
     print("{:.4f} tokens are in the pretrain word embedding matrix".format(count_in / len(idx2token))) # 命中预训练词向量的比例
     word_embedding_init_matrix = torch.FloatTensor(word_embedding_init_matrix)
     
-    fake_inputs = torch.zeros([hyper_parameters["batch_size"], max_seq_len, hyper_parameters["dec_hidden_size"]]).to(device)
     rel_extractor = TPLinkerBiLSTM(word_embedding_init_matrix, 
                                    hyper_parameters["emb_dropout"], 
                                    hyper_parameters["enc_hidden_size"], 
@@ -313,7 +311,6 @@ elif config["encoder"] in {"BiLSTM", }:
                                    hyper_parameters["rnn_dropout"],
                                    len(rel2id), 
                                    hyper_parameters["shaking_type"],
-                                   hyper_parameters["inner_enc_type"],
                                    hyper_parameters["dist_emb_size"],
                                    hyper_parameters["ent_add_dist"],
                                    hyper_parameters["rel_add_dist"],

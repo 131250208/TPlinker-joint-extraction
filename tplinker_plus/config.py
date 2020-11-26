@@ -2,15 +2,14 @@ import string
 import random
 
 common = {
-    "exp_name": "duie2", # ace05_lu
+    "exp_name": "nyt", # nyt, nyt_star, webnlg, webnlg_star, ace05_lu, duie2
     "rel2id": "rel2id.json",
     "ent2id": "ent2id.json",
     "device_num": 1,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
-        "shaking_type": "cln_plus",
-        "inner_enc_type": "lstm",
+        "shaking_type": "cln", # cln, cln_lstm, cat, cat_lstm
         # match_pattern: only_head_text (nyt_star, webnlg_star), whole_text (nyt, webnlg), only_head_index, whole_span, event_extraction
         "match_pattern": "whole_text", 
     },
@@ -39,11 +38,11 @@ train_config = {
     # if not fr scratch, set a model_state_dict
     "model_state_dict_path": "", # valid only if "fr_scratch" is False
     "hyper_parameters": {
-        "batch_size": 32,
-        "epochs": 100,
+        "batch_size": 24,
+        "epochs": 200,
         "seed": 2333,
         "log_interval": 10,
-        "max_seq_len": 128,
+        "max_seq_len": 100,
         "sliding_len": 20,
         "scheduler": "CAWR", # Step
         "ghm": False, # set True if you want to use GHM to adjust the weights of gradients, this will speed up the training process and might improve the results. (Note that ghm in current version is unstable now, may hurt the results)
@@ -74,9 +73,9 @@ eval_config = {
 
 bert_config = {
     "data_home": "../data4bert",
-    "bert_path": "../../pretrained_models/chinese-bert-wwm-ext-hit", # bert-base-cased， chinese-bert-wwm-ext-hit
+    "bert_path": "../../pretrained_models/bert-base-cased", # bert-base-cased， chinese-bert-wwm-ext-hit
     "hyper_parameters": {
-        "lr": 5e-5,
+        "lr": 1e-5,
     },
 }
 bilstm_config = {

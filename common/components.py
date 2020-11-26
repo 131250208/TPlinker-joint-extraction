@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn.parameter import Parameter
 import math
+import torch.nn.functional as F
 
 class LayerNorm(nn.Module):
     def __init__(self, input_dim, cond_dim = 0, center = True, scale = True, epsilon = None, conditional = False,
@@ -93,23 +94,26 @@ class LayerNorm(nn.Module):
         return outputs
     
 class HandshakingKernel(nn.Module):
-    def __init__(self, hidden_size, shaking_type, inner_enc_type):
+    def __init__(self, hidden_size, shaking_type):
         super().__init__()
         self.shaking_type = shaking_type
         if shaking_type == "cat":
             self.combine_fc = nn.Linear(hidden_size * 2, hidden_size)
-        elif shaking_type == "cat_plus":
+        elif shaking_type == "cat_lstm":
             self.combine_fc = nn.Linear(hidden_size * 3, hidden_size)
         elif shaking_type == "cln":
             self.tp_cln = LayerNorm(hidden_size, hidden_size, conditional = True)
-        elif shaking_type == "cln_plus":
+        elif shaking_type == "cln_lstm":
             self.tp_cln = LayerNorm(hidden_size, hidden_size, conditional = True)
             self.inner_context_cln = LayerNorm(hidden_size, hidden_size, conditional = True)
+        elif shaking_type == "cln_att":
+            self.tp_cln = LayerNorm(hidden_size, hidden_size, conditional = True)
+            self.W_q = nn.Linear(hidden_size, hidden_size)
+            self.W_k = nn.Linear(hidden_size, hidden_size)
             
-        self.inner_enc_type = inner_enc_type
-        if inner_enc_type == "mix_pooling":
+        if "mix" in shaking_type:
             self.lamtha = Parameter(torch.rand(hidden_size))
-        elif inner_enc_type == "lstm":
+        if "lstm" in shaking_type:
             self.inner_context_lstm = nn.LSTM(hidden_size, 
                            hidden_size, 
                            num_layers = 1, 
@@ -149,17 +153,31 @@ class HandshakingKernel(nn.Module):
             if self.shaking_type == "cat":
                 shaking_hiddens = torch.cat([repeat_hiddens, visible_hiddens], dim = -1)
                 shaking_hiddens = torch.tanh(self.combine_fc(shaking_hiddens))
-            elif self.shaking_type == "cat_plus":
-                inner_context = self.enc_inner_hiddens(visible_hiddens, self.inner_enc_type)
+            elif self.shaking_type == "cat_lstm":
+                inner_context = self.enc_inner_hiddens(visible_hiddens, "lstm")
                 shaking_hiddens = torch.cat([repeat_hiddens, visible_hiddens, inner_context], dim = -1)
                 shaking_hiddens = torch.tanh(self.combine_fc(shaking_hiddens))
             elif self.shaking_type == "cln":
                 shaking_hiddens = self.tp_cln(visible_hiddens, repeat_hiddens)
-            elif self.shaking_type == "cln_plus":
-                inner_context = self.enc_inner_hiddens(visible_hiddens, self.inner_enc_type)
+            elif self.shaking_type == "cln_lstm":
+                inner_context = self.enc_inner_hiddens(visible_hiddens, "lstm")
                 shaking_hiddens = self.tp_cln(visible_hiddens, repeat_hiddens)
                 shaking_hiddens = self.inner_context_cln(shaking_hiddens, inner_context)
-
+            elif self.shaking_type == "cln_att":
+                shaking_hiddens = self.tp_cln(visible_hiddens, repeat_hiddens)
+                query = self.W_q(shaking_hiddens)
+                key = torch.transpose(self.W_k(seq_hiddens), 1, 2)
+                att = F.softmax(torch.matmul(query, key) / (query.size()[-1] ** 0.5), dim = -1)
+                shaking_hiddens = torch.matmul(att, seq_hiddens)
+#                 weighted_shaking_hiddens = []
+#                 for tp_ind in range(shaking_hiddens.size()[-2]):
+#                     query = shaking_hiddens[:, tp_ind: (tp_ind + 1), :].repeat(1, seq_len, 1)  
+#                     keys = seq_hiddens
+# #                     set_trace()
+#                     att = self.V(torch.tanh(self.W(torch.cat([query, keys], dim = -1))))
+#                     weighted_shaking_hiddens.append(torch.sum(att * seq_hiddens, dim = -2)[:, None, :])
+#                 shaking_hiddens = torch.cat(weighted_shaking_hiddens, dim = -2)
+                    
             shaking_hiddens_list.append(shaking_hiddens)
         long_shaking_hiddens = torch.cat(shaking_hiddens_list, dim = 1)
         return long_shaking_hiddens
