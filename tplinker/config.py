@@ -2,9 +2,9 @@ import string
 import random
 
 common = {
-    "exp_name": "webnlg_star",
+    "exp_name": "nyt_star",
     "rel2id": "rel2id.json",
-    "device_num": 1,
+    "device_num": 0,
 #     "encoder": "BiLSTM",
     "encoder": "BERT", 
     "hyper_parameters": {
@@ -52,8 +52,8 @@ train_config = {
 }
 
 eval_config = {
-    "model_state_dict_dir": "./default_log_dir", # if use wandb, set "./wandb", or set "./default_log_dir" if you use default logger
-    "run_ids": ["DGKhEFlH", ],
+    "model_state_dict_dir": "./wandb", # if use wandb, set "./wandb", or set "./default_log_dir" if you use default logger
+    "run_ids": ["10suiyrf", ],
     "last_k_model": 1,
     "test_data": "*test*.json", # "*test*.json"
     
