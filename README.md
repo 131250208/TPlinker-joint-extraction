@@ -166,3 +166,23 @@ eval_config["last_k_model"] = 1 # only use the last k models in to output result
 # Leave the rest as the same as the training
 ```
 Start evaluation by running `tplinker/Evaluation.ipynb`
+
+# Cite our paper
+'''
+@inproceedings{wang-etal-2020-tplinker,
+    title = "{TPL}inker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking",
+    author = "Wang, Yucheng  and
+      Yu, Bowen  and
+      Zhang, Yueyang  and
+      Liu, Tingwen  and
+      Zhu, Hongsong  and
+      Sun, Limin",
+    booktitle = "Proceedings of the 28th International Conference on Computational Linguistics",
+    month = dec,
+    year = "2020",
+    address = "Barcelona, Spain (Online)",
+    publisher = "International Committee on Computational Linguistics",
+    url = "https://www.aclweb.org/anthology/2020.coling-main.138",
+    pages = "1572--1582"
+}
+'''
