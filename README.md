@@ -167,8 +167,8 @@ eval_config["last_k_model"] = 1 # only use the last k models in to output result
 ```
 Start evaluation by running `tplinker/Evaluation.ipynb`
 
-# Cite our paper
-'''
+# Citation
+```
 @inproceedings{wang-etal-2020-tplinker,
     title = "{TPL}inker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking",
     author = "Wang, Yucheng  and
@@ -185,4 +185,4 @@ Start evaluation by running `tplinker/Evaluation.ipynb`
     url = "https://www.aclweb.org/anthology/2020.coling-main.138",
     pages = "1572--1582"
 }
-'''
+```
