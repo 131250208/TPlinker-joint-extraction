@@ -19,6 +19,7 @@ TPLinker is a joint extraction model resolved the issues of **relation overlappi
   * [Train](#train)
     + [super parameters](#super-parameters)
   * [Evaluation](#evaluation)
+- [Citation](#citation)
 
 ## Update
 * 2020.11.01: Fixed bugs and added comments in BuildData.ipynb and build_data_config.yaml; TPLinkerPlus can support entity classification now, see [build data](#build-data) for the data format; Updated the [datasets](#download-data) (added `entity_list` for TPLinkerPlus).
