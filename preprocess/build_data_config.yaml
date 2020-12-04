@@ -1,10 +1,10 @@
-exp_name: duie2 # nyt_star, nyt, webnlg_star, webnlg, ace05_lu
+exp_name: webnlg_star # nyt_star, nyt, webnlg_star, webnlg, ace05_lu
 data_in_dir: ../ori_data
-ori_data_format: tplinker # casrel (webnlg_star, nyt_star), etl_span (webnlg), raw_nyt (nyt), tplinker (see readme)
+ori_data_format: casrel # casrel (webnlg_star, nyt_star), etl_span (webnlg), raw_nyt (nyt), tplinker (see readme)
 
 # if build data for BERT, use these 3 lines and comment the following 2 lines.
 encoder: BERT
-bert_path: ../../pretrained_models/chinese-bert-wwm-ext-hit #  chinese-bert-wwm-ext-hit, bert-base-cased
+bert_path: ../../pretrained_models/bert-base-cased #  chinese-bert-wwm-ext-hit, bert-base-cased
 data_out_dir: ../data4bert
 
 # # if build data for BiLSTM, use these 2 lines and comment above 3 lines.
@@ -17,6 +17,6 @@ data_out_dir: ../data4bert
 # ignore_subword: when adding character level spans, match words with whitespace around: " word ", to avoid subword match, set false for chinese
 # check_tok_span: check whether there is any error with token spans, if there is, print the unmatch info
 add_char_span: true
-ignore_subword: false
+ignore_subword: true
 separate_char_by_white: false
 check_tok_span: true
