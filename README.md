@@ -44,11 +44,11 @@ TPLinker is a joint extraction model resolved the issues of **relation overlappi
 
 ## Usage
 ### Prerequisites
-Our experiments are conducted on Python 3.6 and Pytorch >= 1.5. 
+Our experiments are conducted on Python 3.6 and Pytorch == 1.6.0. 
 The main requirements are:
 * tqdm
 * glove-python-binary==0.2.0
-* transformers==2.10.0
+* transformers==3.0.2
 * wandb # for logging the results
 * yaml
 
