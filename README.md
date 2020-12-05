@@ -23,6 +23,7 @@ TPLinker is a joint extraction model resolved the issues of **relation overlappi
 
 ## Update
 * 2020.11.01: Fixed bugs and added comments in BuildData.ipynb and build_data_config.yaml; TPLinkerPlus can support entity classification now, see [build data](#build-data) for the data format; Updated the [datasets](#download-data) (added `entity_list` for TPLinkerPlus).
+* 2020.12.04: The original default parameters in `build_data_config.yaml` are all for Chinese datasets. It might be misleading for reproducing the results. I changed back to the ones for English datasets. **Note that you must set `ignore_subword` to `true` for English datasets**, or it will hurt the performance and can not reach the scores reported in the paper.
 
 ## Model
 <p align="center">
