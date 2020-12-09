@@ -24,6 +24,7 @@ TPLinker is a joint extraction model resolved the issues of **relation overlappi
 ## Update
 * 2020.11.01: Fixed bugs and added comments in BuildData.ipynb and build_data_config.yaml; TPLinkerPlus can support entity classification now, see [build data](#build-data) for the data format; Updated the [datasets](#download-data) (added `entity_list` for TPLinkerPlus).
 * 2020.12.04: The original default parameters in `build_data_config.yaml` are all for Chinese datasets. It might be misleading for reproducing the results. I changed back to the ones for English datasets. **Note that you must set `ignore_subword` to `true` for English datasets**, or it will hurt the performance and can not reach the scores reported in the paper.
+* 2020.12.09: We published model states for fast tests. See [Super Parameters](#super-parameters).
 
 ## Model
 <p align="center">
@@ -119,9 +120,7 @@ cd tplinker
 python train.py
 ```
 
-#### super parameters
-**You can reproduce the results by following parameters:**
-
+#### Super Parameters
 **TPLinker**
 ```
 # NYT*
@@ -161,14 +160,13 @@ match_pattern: whole_text
 ```
 
 We also provide model states for fast tests. You can download them [here](https://drive.google.com/drive/folders/1GCWNXQN-L09oSG9ZFYi979wk2dTS9h-3?usp=sharing)! 
-
+You can get results as follows:
+```
 Before you run, make sure:
 1. transformers==3.0.2
 2. "max_test_seq_len" is set to 512
 3. "match_pattern" should be the same as in the training:  `whole_text` for NYT/WebNLG, `only_head_text` for NYT*/WebNLG*.
 
-You can get results as follows:
-```
 # The test_triples and the test_data are the complete test datasets. The tuple means (precision, recall, f1).
 # In the codes, I did not set the seed in a right way, so you might get different scores (higher or lower). But they should be very close to the results in the paper. 
 
@@ -289,12 +287,7 @@ Start evaluation by running `tplinker/Evaluation.ipynb`
 ```
 @inproceedings{wang-etal-2020-tplinker,
     title = "{TPL}inker: Single-stage Joint Extraction of Entities and Relations Through Token Pair Linking",
-    author = "Wang, Yucheng  and
-      Yu, Bowen  and
-      Zhang, Yueyang  and
-      Liu, Tingwen  and
-      Zhu, Hongsong  and
-      Sun, Limin",
+    author = "Wang, Yucheng and Yu, Bowen and Zhang, Yueyang and Liu, Tingwen and Zhu, Hongsong and Sun, Limin",
     booktitle = "Proceedings of the 28th International Conference on Computational Linguistics",
     month = dec,
     year = "2020",
