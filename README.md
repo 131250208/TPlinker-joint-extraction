@@ -120,10 +120,127 @@ python train.py
 ```
 
 #### super parameters
+**You can reproduce the results by following parameters:**
+
 **TPLinker**
 ```
-Just follow the paper
+# NYT*
+T_mult: 1
+batch_size: 24
+dist_emb_size: -1
+ent_add_dist: false
+epochs: 100
+inner_enc_type: lstm
+log_interval: 10
+loss_weight_recover_steps: 12000
+lr: 0.00005
+match_pattern: only_head_text
+max_seq_len: 100
+rel_add_dist: false
+rewarm_epoch_num: 2
+scheduler: CAWR
+seed: 2333
+shaking_type: cat
+sliding_len: 20
+
+# NYT
+match_pattern: whole_text
+...(the rest is the same as above)
+
+# WebNLG*
+batch_size: 6
+loss_weight_recover_steps: 6000
+match_pattern: only_head_text
+...
+
+# WebNLG
+batch_size: 6
+loss_weight_recover_steps: 6000
+match_pattern: whole_text
+...
 ```
+
+We also provide model states for fast tests. You can download them [here](https://drive.google.com/drive/folders/1GCWNXQN-L09oSG9ZFYi979wk2dTS9h-3?usp=sharing)! 
+
+Before you run, make sure:
+1. transformers==3.0.2
+2. "max_test_seq_len" is set to 512
+3. "match_pattern" should be the same as in the training:  `whole_text` for NYT/WebNLG, `only_head_text` for NYT*/WebNLG*.
+
+You can get results as follows:
+```
+# The test_triples and the test_data are the complete test datasets. The tuple means (precision, recall, f1).
+# In the codes, I did not set the seed in a right way, so you might get different scores (higher or lower). But they should be very close to the results in the paper. 
+
+# NYT*
+{'2og80ub4': {'test_triples': (0.9118290017002562,
+                               0.9257706535141687,
+                               0.9187469407233642),
+              'test_triples_1': (0.8641055045871312,
+                                 0.929099876695409,
+                                 0.8954248365513463),
+              'test_triples_2': (0.9435444280804642,
+                                 0.9196172248803387,
+                                 0.9314271867684752),
+              'test_triples_3': (0.9550056242968554,
+                                 0.9070512820511851,
+                                 0.9304109588540408),
+              'test_triples_4': (0.9635099913118189,
+                                 0.9527491408933889,
+                                 0.9580993520017547),
+              'test_triples_5': (0.9177877428997133,
+                                 0.9082840236685046,
+                                 0.9130111523662223),
+              'test_triples_epo': (0.9497520661156711,
+                                   0.932489451476763,
+                                   0.9410415983777494),
+              'test_triples_normal': (0.8659532526048757,
+                                      0.9281617869000626,
+                                      0.895979020929055),
+              'test_triples_seo': (0.9476190476190225,
+                                   0.9258206254845974,
+                                   0.9365930186452366)}}
+                                   
+# NYT
+{'y84trnyf': {'test_data': (0.916494217894085,
+                            0.9272167487684615,
+                            0.9218243035924758)}}
+
+# WebNLG*
+{'2i4808qi': {'test_triples': (0.921855146124465,
+                               0.91777356103726,
+                               0.919809825623476),
+              'test_triples_1': (0.8759398496237308,
+                                 0.8759398496237308,
+                                 0.8759398495737308),
+              'test_triples_2': (0.9075144508667897,
+                                 0.9235294117644343,
+                                 0.9154518949934687),
+              'test_triples_3': (0.9509043927646122,
+                                 0.9460154241642813,
+                                 0.9484536081971787),
+              'test_triples_4': (0.9297752808986153,
+                                 0.9271708683470793,
+                                 0.928471248196584),
+              'test_triples_5': (0.9360730593603032,
+                                 0.8951965065498275,
+                                 0.9151785713781879),
+              'test_triples_epo': (0.9764705882341453,
+                                   0.9431818181807463,
+                                   0.959537572203241),
+              'test_triples_normal': (0.8780487804874479,
+                                      0.8780487804874479,
+                                      0.8780487804374479),
+              'test_triples_seo': (0.9299698795180023,
+                                   0.9250936329587321,
+                                   0.9275253473025405)}}
+                                   
+# WebNLG
+{'1g7ehpsl': {'test': (0.8862619808306142,
+                       0.8630989421281354,
+                       0.8745271121819839)}}
+```
+
 **TPLinkerPlus**
 ```
 # NYT*/NYT
@@ -156,7 +273,6 @@ shaking_type: cln
 sliding_len: 20
 tok_pair_sample_rate: 1
 ```
-**Note: Adjusting the learning rate and add epochs may help achieve better performance. It would be helpful to change scheduler, cause it is slow to converge by CAWR. If you get a better performance, it would be very nice of you to share the super parameters by an issue!**
 
 ### Evaluation
 Set configuration in `tplinker/config.py` as follows:
