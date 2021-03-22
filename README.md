@@ -302,14 +302,25 @@ Start evaluation by running `tplinker/Evaluation.ipynb`
 
 # Frequently Asked Questions
 1. Why did you make all entities to be "DEFAULT" type? TPLinker can not recognize the type of entities?
+
 Because it is not necessary to recognize the type of entities for the relation extraction task since a predefined relation usually has fixed types for its subject and object. For example, ("place", "contains", "place") and ("country", "capital", "city"). If you need this feature, you can redefine the output tags of the EH-to-ET sequence or use TPLinkerPlus, which has already had this feature. If you use TPLinkerPlus, just set a specific entity type instead of "DEFAULT" in the entity_list.
+
 2. What is the difference between <dataset_name>_star and <dataset_name>?
+
 For fair comparison, we use the preprocessed data from previous works. NYT is from [CopyRE](https://github.com/xiangrongzeng/copy_re) (the raw version); WebNLG is from [ETL-span](https://github.com/yubowen-ph/JointER/tree/master/dataset/WebNLG/data); NYT* and WebNLG* are from [CasRel](https://github.com/weizhepei/CasRel/tree/master/data). For a detailed description of these datasets, please refer to the data description part of our paper.
+
 3. Previous works claim that WebNLG has 246 relations. Why do you use the WebNLG and WebNLG* that have less relations?
+
 We directly use the datasets preprocessed by previous SoTA models. We get them from their Github repositories. We recounted the relations in the datasets and found out the real relation number of WebNLG and WebNLG* are less than they claimed in the papers. In fact, they use a subset (6000+ samples) WebNLG instead of the original WebNLG (10000+ samples) but use the statistics of the original one. If you re-count the relations in their datasets you will also find this problem.
+
 4. My training process is far slower than you claimed (24h). Could you give any suggestions?
+
 Please use the hyper-parameters I provided in README to reproduce the results. If you want to change them, please make the max_seq_length of training less than or equal to 100. From my experience, increasing the max_seq_length to larger than 100 did not bring obvious improvement but hurt the training speed so much. Using smaller batch_size will also speed up the training but it might hurt the performance if you use too small batch_size.
+
 5. I see you split the long text to short ones. You might miss some golden entities and relations by splitting. How do you handle this?
+
 We use a sliding window to split the samples, which will contain the most part of golden entities and relations. And we use different max_seq_length for training and inference. The former is set to 100 and the latter is set to 512. It is ok to lose one or two entities or relations when training, which will not influence the training too much.
+
 6. How to use this model for Chinese datasets?
+
 Please refer to the issue #15.
