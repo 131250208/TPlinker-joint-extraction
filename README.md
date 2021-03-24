@@ -91,7 +91,7 @@ If you want to run on other datasets, transform them into the normal format for 
 "entity_list": [{ # This key is optional, only for TPLinkerPlus. If no this key, BuildData.ipynb will auto genrate a entity list based on the relation list.
     "text": <entity>,
     "type": <entity_type>,
-    "char_span": <character level span of the object>, # This key relys on subj_char_span and obj_char_span in relation_list, if you do not have, set "add_char_span" to true in "build_data_config.yaml".
+    "char_span": <character level span of the object>, # This key relys on subj_char_span and obj_char_span in relation_list, if not given, set "add_char_span" to true in "build_data_config.yaml".
  }],
 }]
 ```
