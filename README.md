@@ -323,4 +323,8 @@ We use a sliding window to split the samples, which will contain the most part o
 
 6. How to use this model for Chinese datasets?
 
-Please refer to the issue #15.
+Please refer to issue #15.
+
+7. My f1 score stay at 0 for a very long time. Do you have any idea?
+
+Please refer to issue #24 and #25.
